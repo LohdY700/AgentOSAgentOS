@@ -13,6 +13,7 @@ from .doctor import run_doctor
 from .event_store import JsonlEventStore
 from .store_config import load_event_store_config
 from .approval import load_policy, classify_action
+from .learning import LearningInbox
 
 
 def _parse_iso(ts: str) -> datetime:
@@ -85,6 +86,9 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
     t1 = approval_policy.get("tiers", {}).get("tier1_auto", {}).get("actions", [])
     t2 = approval_policy.get("tiers", {}).get("tier2_owner", {}).get("actions", [])
 
+    learning = LearningInbox(root_dir / "data" / "learning-inbox.jsonl")
+    learning_recent = learning.list_recent(limit=10)
+
     return {
         "doctor": doctor,
         "approval": {
@@ -100,6 +104,10 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
             "recent": recent,
         },
         "agents": agents,
+        "learning": {
+            "count": len(learning_recent),
+            "recent": learning_recent,
+        },
     }
 
 
@@ -167,6 +175,12 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                     }
                 )
                 return
+            if parsed.path == "/api/learn/list":
+                q = parse_qs(parsed.query)
+                limit = int((q.get("limit", ["20"])[0] or "20"))
+                inbox = LearningInbox(root_dir / "data" / "learning-inbox.jsonl")
+                self._send_json({"ok": True, "items": inbox.list_recent(limit=limit)})
+                return
             if parsed.path == "/app.js":
                 self.send_response(200)
                 self.send_header("Content-Type", "application/javascript; charset=utf-8")
@@ -190,6 +204,22 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
             if parsed.path == "/api/run/benchmark":
                 try:
                     self._send_json({"ok": True, "benchmark": run_benchmark_once(root_dir, guard_config_path, store_config_path)})
+                except Exception as exc:  # noqa: BLE001
+                    self._send_json({"ok": False, "error": str(exc)}, code=500)
+                return
+            if parsed.path == "/api/learn/add":
+                try:
+                    length = int(self.headers.get("Content-Length", "0"))
+                    raw = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
+                    body = json.loads(raw)
+                    url = str(body.get("url", "")).strip()
+                    note = str(body.get("note", "")).strip()
+                    if not url:
+                        self._send_json({"ok": False, "error": "url is required"}, code=400)
+                        return
+                    inbox = LearningInbox(root_dir / "data" / "learning-inbox.jsonl")
+                    item = inbox.add(url, note)
+                    self._send_json({"ok": True, "item": {"url": item.url, "note": item.note, "created_at": item.created_at}})
                 except Exception as exc:  # noqa: BLE001
                     self._send_json({"ok": False, "error": str(exc)}, code=500)
                 return
@@ -245,6 +275,17 @@ DASHBOARD_HTML = """<!doctype html>
     <ul id='next-steps'>
       <li>Đang tải gợi ý...</li>
     </ul>
+  </div>
+
+  <div class='card'>
+    <h3>Learning Inbox</h3>
+    <div style='display:flex;gap:8px;flex-wrap:wrap'>
+      <input id='learn-url' placeholder='Dán link để AIOS học' style='flex:1;min-width:280px;padding:8px;border:1px solid #ddd;border-radius:8px;' />
+      <input id='learn-note' placeholder='Ghi chú (tuỳ chọn)' style='flex:1;min-width:220px;padding:8px;border:1px solid #ddd;border-radius:8px;' />
+      <button onclick='addLearningLink()'>Add Link</button>
+    </div>
+    <div id='learn-result' style='margin-top:8px;color:#444;'></div>
+    <div id='learn-brief' style='margin-top:8px;color:#444;'>Đang tải...</div>
   </div>
 
   <div class='card'>
@@ -417,6 +458,31 @@ async function copyPublicStatus() {
   }
 }
 
+async function addLearningLink() {
+  const urlEl = document.getElementById('learn-url');
+  const noteEl = document.getElementById('learn-note');
+  const url = (urlEl.value || '').trim();
+  const note = (noteEl.value || '').trim();
+  if (!url) {
+    document.getElementById('learn-result').textContent = '⚠️ Vui lòng nhập URL.';
+    return;
+  }
+  const res = await fetch('/api/learn/add', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: url, note: note })
+  });
+  const data = await res.json();
+  if (!data.ok) {
+    document.getElementById('learn-result').textContent = '⚠️ Add thất bại: ' + (data.error || 'unknown');
+    return;
+  }
+  document.getElementById('learn-result').textContent = '✅ Đã thêm link vào Learning Inbox.';
+  urlEl.value = '';
+  noteEl.value = '';
+  await refresh();
+}
+
 async function runHealthCheck() {
   const res = await fetch('/api/run/doctor', { method: 'POST' });
   const data = await res.json();
@@ -459,6 +525,11 @@ async function refresh() {
   const ap = data.approval || {};
   document.getElementById('approval-brief').textContent =
     'Tier1 auto: ' + (ap.tier1_count || 0) + ' | Tier2 owner: ' + (ap.tier2_count || 0) + ' | Pre-approval: ' + (ap.preapproval_enabled ? 'ON' : 'OFF') + ' (' + (ap.preapproval_max_minutes || 0) + 'm)';
+
+  const learn = data.learning || {};
+  const lr = learn.recent || [];
+  const latest = lr.length ? lr[lr.length - 1].url : 'chưa có link';
+  document.getElementById('learn-brief').textContent = 'Inbox: ' + (learn.count || 0) + ' link | Mới nhất: ' + latest;
 
   const storeSummary = {
     path: data.store.path,
