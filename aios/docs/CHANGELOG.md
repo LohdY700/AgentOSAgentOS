@@ -11,6 +11,7 @@
 - Added `doctor` self-check command for guard/store config + writable probe.
 - Added `make ci-smoke` target (test + doctor + benchmark) and wired CI workflow to use it.
 - Added `make release-check` target (ci-smoke + report + replay-store) for pre-publish flow.
+- Added local web dashboard (`make dashboard`) with health status + recent events for non-technical users.
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.

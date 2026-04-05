@@ -54,6 +54,7 @@ make bench-throughput
 make doctor
 make ci-smoke
 make release-check
+make dashboard
 ```
 
 (hoặc chạy tay)
@@ -96,6 +97,13 @@ Self-check nhanh cấu hình + quyền ghi:
 make doctor
 ```
 `doctor` trả exit code chuẩn: `0` (OK), `1` (có lỗi) để nhúng CI/healthcheck.
+
+Dashboard trực quan cho người dùng không kỹ thuật:
+```bash
+make dashboard
+# mở trình duyệt: http://127.0.0.1:8787
+```
+Trang này hiển thị trạng thái Healthy/Warning, summary event store và 20 events gần nhất.
 
 Output benchmark sẽ trả JSON với 5 metrics cốt lõi:
 - `event_throughput`

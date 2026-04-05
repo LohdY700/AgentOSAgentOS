@@ -1,4 +1,4 @@
-.PHONY: demo bench report test learning replay-store store-prune demo-lowram bench-lowram demo-throughput bench-throughput doctor ci-smoke
+.PHONY: demo bench report test learning replay-store store-prune demo-lowram bench-lowram demo-throughput bench-throughput doctor ci-smoke release-check dashboard
 
 PYTHONPATH_SRC=PYTHONPATH=src
 
@@ -47,3 +47,6 @@ release-check:
 	$(MAKE) ci-smoke
 	$(MAKE) report
 	$(MAKE) replay-store
+
+dashboard:
+	$(PYTHONPATH_SRC) python3 -m aios_core.cli dashboard --host 127.0.0.1 --port 8787

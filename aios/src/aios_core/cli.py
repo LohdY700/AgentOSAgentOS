@@ -122,6 +122,9 @@ def main() -> None:
     sub.add_parser("benchmark", help="run mini benchmark and output JSON metrics")
     sub.add_parser("replay-store", help="summarize persisted events from local JSONL store")
     sub.add_parser("doctor", help="run self-check on guard/store configs and write access")
+    dash = sub.add_parser("dashboard", help="start local web dashboard for non-technical users")
+    dash.add_argument("--host", default="127.0.0.1")
+    dash.add_argument("--port", type=int, default=8787)
 
     args = parser.parse_args()
     guard_cfg = Path(args.guard_config)
@@ -136,6 +139,8 @@ def main() -> None:
     elif args.cmd == "doctor":
         print(render_doctor_json(ROOT_DIR, guard_cfg, store_cfg))
         raise SystemExit(doctor_exit_code(ROOT_DIR, guard_cfg, store_cfg))
+    elif args.cmd == "dashboard":
+        run_dashboard(args.host, args.port, ROOT_DIR, guard_cfg, store_cfg)
 
 
 if __name__ == "__main__":
