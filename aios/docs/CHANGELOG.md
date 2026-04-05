@@ -1,5 +1,10 @@
 # AIOS Changelog
 
+## v0.1.2 (in progress)
+- Added local event-store pruning script (`scripts/prune_event_store.py`).
+- Added `make store-prune` target.
+- Added unit test for prune behavior.
+
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.
 - Reduced strict-mode noise for dynamic process names (e.g. `kworker/*`).

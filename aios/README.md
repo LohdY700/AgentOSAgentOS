@@ -48,6 +48,7 @@ make bench
 make report
 make test
 make replay-store
+make store-prune
 ```
 
 (hoặc chạy tay)
@@ -75,6 +76,10 @@ Event đã publish được append vào local JSONL store: `data/events.jsonl`.
 Có thể xem thống kê nhanh bằng:
 ```bash
 make replay-store
+```
+Và prune giữ lại 1000 event gần nhất:
+```bash
+make store-prune
 ```
 
 Output benchmark sẽ trả JSON với 5 metrics cốt lõi:

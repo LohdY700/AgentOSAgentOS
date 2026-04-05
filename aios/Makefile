@@ -1,4 +1,4 @@
-.PHONY: demo bench report test learning replay-store
+.PHONY: demo bench report test learning replay-store store-prune
 
 PYTHONPATH_SRC=PYTHONPATH=src
 
@@ -19,3 +19,6 @@ learning:
 
 replay-store:
 	$(PYTHONPATH_SRC) python3 -m aios_core.cli replay-store
+
+store-prune:
+	python3 scripts/prune_event_store.py --path data/events.jsonl --keep-last 1000
