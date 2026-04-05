@@ -93,13 +93,24 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
     notes_path = root_dir / "data" / "learning-notes.jsonl"
     notes_recent: list[dict[str, Any]] = []
     if notes_path.exists():
-        for line in notes_path.read_text(encoding="utf-8").splitlines()[-10:]:
+        for line in notes_path.read_text(encoding="utf-8").splitlines()[-20:]:
             if not line.strip():
                 continue
             try:
                 notes_recent.append(json.loads(line))
             except Exception:
                 pass
+
+    insights: list[str] = []
+    for row in reversed(notes_recent):
+        title = str(row.get("title", "")).strip()
+        summary = str(row.get("summary", "")).strip()
+        if title and title not in insights:
+            insights.append(title)
+        elif summary:
+            insights.append(summary[:90])
+        if len(insights) >= 3:
+            break
 
     return {
         "doctor": doctor,
@@ -121,6 +132,7 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
             "recent": learning_recent,
             "notes_count": len(notes_recent),
             "notes_recent": notes_recent,
+            "insights": insights,
         },
     }
 
@@ -307,6 +319,10 @@ DASHBOARD_HTML = """<!doctype html>
     </div>
     <div id='learn-result' style='margin-top:8px;color:#444;'></div>
     <div id='learn-brief' style='margin-top:8px;color:#444;'>Đang tải...</div>
+    <div style='margin-top:8px;'><b>Top 3 insights hôm nay</b></div>
+    <ul id='learn-insights'>
+      <li>Đang tổng hợp insight...</li>
+    </ul>
   </div>
 
   <div class='card'>
@@ -562,6 +578,21 @@ async function refresh() {
   const lr = learn.recent || [];
   const latest = lr.length ? lr[lr.length - 1].url : 'chưa có link';
   document.getElementById('learn-brief').textContent = 'Inbox: ' + (learn.count || 0) + ' link | Learned notes: ' + (learn.notes_count || 0) + ' | Mới nhất: ' + latest;
+
+  const insightList = document.getElementById('learn-insights');
+  insightList.innerHTML = '';
+  const insights = learn.insights || [];
+  if (!insights.length) {
+    const li = document.createElement('li');
+    li.textContent = 'Chưa có insight, hãy thêm link rồi bấm Learn Now.';
+    insightList.appendChild(li);
+  } else {
+    for (const s of insights.slice(0, 3)) {
+      const li = document.createElement('li');
+      li.textContent = s;
+      insightList.appendChild(li);
+    }
+  }
 
   const storeSummary = {
     path: data.store.path,
