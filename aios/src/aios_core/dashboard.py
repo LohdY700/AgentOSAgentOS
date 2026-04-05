@@ -212,6 +212,9 @@ DASHBOARD_HTML = """<!doctype html>
     .active { background:#e8f7ee; color:#0a7d2c; }
     .idle { background:#fff5e6; color:#9a6700; }
     .down { background:#fdecec; color:#b42318; }
+    .life-wrap { display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+    canvas#life-canvas { background:#0b1220; border-radius:12px; border:1px solid #1f2a44; }
+    .life-note { font-size:14px; color:#444; }
   </style>
 </head>
 <body>
@@ -221,6 +224,18 @@ DASHBOARD_HTML = """<!doctype html>
   <button onclick='runHealthCheck()'>Run Health Check</button>
   <button onclick='runBenchmark()'>Run Benchmark</button>
   <div id='action-result' style='margin-top:8px;color:#444;'></div>
+
+  <div class='card'>
+    <h3>AIOS Life Pulse</h3>
+    <div class='life-wrap'>
+      <canvas id='life-canvas' width='320' height='180'></canvas>
+      <div>
+        <div id='life-stage'><b>Stage:</b> head-only</div>
+        <div id='life-length'><b>Length:</b> 1</div>
+        <div class='life-note'>Chú rắn sẽ dài ra theo số event tích lũy — càng học, càng lớn.</div>
+      </div>
+    </div>
+  </div>
 
   <div class='card'>
     <h3>Active Agents</h3>
@@ -265,6 +280,51 @@ function toggleRecentRaw() {
   el.style.display = (el.style.display === 'none') ? 'block' : 'none';
 }
 
+const life = { angle: 0, targetLen: 1, currentLen: 1 };
+
+function drawLife() {
+  const canvas = document.getElementById('life-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // tiny world
+  ctx.fillStyle = '#111a2e';
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = '#20304f';
+  ctx.beginPath();
+  ctx.arc(w/2, h/2, 62, 0, Math.PI * 2);
+  ctx.stroke();
+
+  life.currentLen += (life.targetLen - life.currentLen) * 0.08;
+  const segs = Math.max(1, Math.round(life.currentLen));
+  const radius = 62;
+
+  for (let i = segs - 1; i >= 0; i--) {
+    const a = life.angle - i * 0.22;
+    const x = w/2 + Math.cos(a) * radius;
+    const y = h/2 + Math.sin(a) * radius;
+    const r = (i === 0) ? 8 : 6;
+    ctx.fillStyle = (i === 0) ? '#7ee787' : '#3fb950';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  life.angle += 0.03;
+  requestAnimationFrame(drawLife);
+}
+
+function updateLifeMeta(eventCount) {
+  // every 100 events grows 1 segment, cap at 24 for readability
+  const seg = Math.min(24, 1 + Math.floor((eventCount || 0) / 100));
+  life.targetLen = seg;
+  const stage = seg <= 2 ? 'head-only' : (seg <= 8 ? 'growing' : 'evolved');
+  document.getElementById('life-stage').innerHTML = `<b>Stage:</b> ${stage}`;
+  document.getElementById('life-length').innerHTML = `<b>Length:</b> ${seg}`;
+}
+
 async function runHealthCheck() {
   const res = await fetch('/api/run/doctor', { method: 'POST' });
   const data = await res.json();
@@ -288,6 +348,7 @@ async function refresh() {
   const res = await fetch('/api/status');
   const data = await res.json();
   const ok = data.doctor?.ok;
+  updateLifeMeta(data.store?.events || 0);
   const el = document.getElementById('health');
   el.className = ok ? 'ok' : 'bad';
   el.textContent = ok ? '✅ Healthy' : '⚠️ Warning';
@@ -320,7 +381,9 @@ async function refresh() {
   document.getElementById('recent-brief').textContent = `Hiển thị ${recentCount} events gần nhất`;
   document.getElementById('recent').textContent = JSON.stringify(data.store.recent, null, 2);
 }
+drawLife();
 refresh();
+setInterval(refresh, 15000);
 </script>
 </body>
 </html>
