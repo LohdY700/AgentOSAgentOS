@@ -49,4 +49,5 @@ release-check:
 	$(MAKE) replay-store
 
 dashboard:
+	fuser -k 8787/tcp 2>/dev/null || true
 	$(PYTHONPATH_SRC) python3 -m aios_core.cli dashboard --host 127.0.0.1 --port 8787
