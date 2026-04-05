@@ -5,11 +5,12 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 from .doctor import run_doctor
 from .event_store import JsonlEventStore
 from .store_config import load_event_store_config
-from .approval import load_policy
+from .approval import load_policy, classify_action
 
 
 def _parse_iso(ts: str) -> datetime:
@@ -119,10 +120,29 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
             self.wfile.write(body)
 
         def do_GET(self):  # noqa: N802
-            if self.path == "/api/status":
+            parsed = urlparse(self.path)
+            if parsed.path == "/api/status":
                 self._send_json(build_snapshot(root_dir, guard_config_path, store_config_path))
                 return
-            if self.path in ("/", "/index.html"):
+            if parsed.path == "/api/approval/check":
+                q = parse_qs(parsed.query)
+                action = (q.get("action", [""])[0] or "").strip()
+                if not action:
+                    self._send_json({"ok": False, "error": "missing action query param"}, code=400)
+                    return
+                policy_path = root_dir / "config" / "approval-policy.json"
+                policy = load_policy(policy_path) if policy_path.exists() else {"tiers": {}}
+                decision = classify_action(action, policy)
+                self._send_json(
+                    {
+                        "ok": True,
+                        "action": decision.action,
+                        "tier": decision.tier,
+                        "auto_approved": decision.auto_approved,
+                    }
+                )
+                return
+            if parsed.path in ("/", "/index.html"):
                 self._send_html(DASHBOARD_HTML)
                 return
             self._send_json({"error": "not found"}, code=404)

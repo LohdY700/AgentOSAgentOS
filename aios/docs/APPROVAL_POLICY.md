@@ -31,3 +31,12 @@ For every Tier-2 action:
 - reason
 - timestamp
 - approval status (approved/denied)
+
+## Quick API Check
+Dashboard server exposes policy check endpoint:
+
+```bash
+curl "http://127.0.0.1:8787/api/approval/check?action=sudo_command"
+```
+
+Response includes `tier` and `auto_approved`.
