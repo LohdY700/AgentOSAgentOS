@@ -14,6 +14,8 @@
 - Added local web dashboard (`make dashboard`) with health status + recent events for non-technical users.
 - Dashboard now includes Agent Activity table (active/idle/down, last event, event count).
 - Added 2-tier approval policy docs + config and dashboard approval summary card.
+- Added dashboard action buttons for non-technical users (`Run Health Check`, `Run Benchmark`).
+- Added API endpoint `/api/approval/check?action=...` for policy decision queries.
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -101,6 +103,25 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
     }
 
 
+def run_health_check(root_dir: Path, guard_config_path: Path, store_config_path: Path) -> dict[str, Any]:
+    return run_doctor(root_dir, guard_config_path, store_config_path)
+
+
+def run_benchmark_once(root_dir: Path, guard_config_path: Path, store_config_path: Path) -> dict[str, Any]:
+    cmd = [
+        sys.executable,
+        "-m",
+        "aios_core.cli",
+        "--guard-config",
+        str(guard_config_path),
+        "--store-config",
+        str(store_config_path),
+        "benchmark",
+    ]
+    out = subprocess.check_output(cmd, cwd=str(root_dir), text=True)
+    return json.loads(out.strip().splitlines()[-1])
+
+
 def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Path):
     class Handler(BaseHTTPRequestHandler):
         def _send_json(self, payload: dict[str, Any], code: int = 200) -> None:
@@ -147,6 +168,19 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                 return
             self._send_json({"error": "not found"}, code=404)
 
+        def do_POST(self):  # noqa: N802
+            parsed = urlparse(self.path)
+            if parsed.path == "/api/run/doctor":
+                self._send_json(run_health_check(root_dir, guard_config_path, store_config_path))
+                return
+            if parsed.path == "/api/run/benchmark":
+                try:
+                    self._send_json({"ok": True, "benchmark": run_benchmark_once(root_dir, guard_config_path, store_config_path)})
+                except Exception as exc:  # noqa: BLE001
+                    self._send_json({"ok": False, "error": str(exc)}, code=500)
+                return
+            self._send_json({"error": "not found"}, code=404)
+
         def log_message(self, fmt: str, *args):
             return
 
@@ -184,6 +218,9 @@ DASHBOARD_HTML = """<!doctype html>
   <h1>AIOS Dashboard</h1>
   <p id='health'>Loading...</p>
   <button onclick='refresh()'>Refresh</button>
+  <button onclick='runHealthCheck()'>Run Health Check</button>
+  <button onclick='runBenchmark()'>Run Benchmark</button>
+  <div id='action-result' style='margin-top:8px;color:#444;'></div>
 
   <div class='card'>
     <h3>Active Agents</h3>
@@ -226,6 +263,25 @@ function toggleStoreRaw() {
 function toggleRecentRaw() {
   const el = document.getElementById('recent');
   el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+}
+
+async function runHealthCheck() {
+  const res = await fetch('/api/run/doctor', { method: 'POST' });
+  const data = await res.json();
+  document.getElementById('action-result').textContent = data.ok ? '✅ Health check OK' : '⚠️ Health check warning';
+  await refresh();
+}
+
+async function runBenchmark() {
+  const res = await fetch('/api/run/benchmark', { method: 'POST' });
+  const data = await res.json();
+  if (!data.ok) {
+    document.getElementById('action-result').textContent = '⚠️ Benchmark failed: ' + (data.error || 'unknown');
+    return;
+  }
+  const b = data.benchmark || {};
+  document.getElementById('action-result').textContent = `✅ Benchmark done | p95: ${b.event_latency_p95} ms | throughput: ${b.event_throughput}`;
+  await refresh();
 }
 
 async function refresh() {

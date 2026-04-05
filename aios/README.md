@@ -26,6 +26,7 @@ Mục tiêu: biến bản demo 65MB/5s boot thành hệ thống có thể demo c
 - `docs/RELEASE_CHECKLIST.md` — checklist trước khi public
 - `docs/RELEASE_NOTES_v0.1.0.md` — release notes draft
 - `docs/RELEASE_NOTES_v0.1.1.md` — patch notes (noise reduction)
+- `docs/RELEASE_NOTES_v0.1.3.md` — dashboard UX + approval API
 - `docs/CHANGELOG.md` — lịch sử thay đổi
 - `docs/PUBLISH_CHECK.md` — checklist 60 giây trước khi publish
 - `docs/RELEASE_COMMANDS.md` — lệnh phát hành/tag
@@ -104,6 +105,7 @@ make dashboard
 # mở trình duyệt: http://127.0.0.1:8787
 ```
 Trang này hiển thị trạng thái Healthy/Warning, bảng Active Agents (active/idle/down), Approval Policy tóm tắt, summary event store và 20 events gần nhất.
+Có nút thao tác trực tiếp: **Run Health Check** và **Run Benchmark**.
 
 Output benchmark sẽ trả JSON với 5 metrics cốt lõi:
 - `event_throughput`
