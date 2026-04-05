@@ -10,18 +10,21 @@ from pathlib import Path
 from .bus import EventBus
 from .config import load_guard_config
 from .events import Event
+from .event_store import JsonlEventStore
 from .guard import ProcessGuard
 from .metrics import Metrics
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
-DEFAULT_GUARD_CONFIG = Path(__file__).resolve().parents[2] / "config" / "guard-allowlist.json"
+ROOT_DIR = Path(__file__).resolve().parents[2]
+DEFAULT_GUARD_CONFIG = ROOT_DIR / "config" / "guard-allowlist.json"
+DEFAULT_EVENT_STORE = ROOT_DIR / "data" / "events.jsonl"
 
 
 async def _cmd_demo(guard_config_path: Path) -> None:
     print("AIOS demo starting")
     metrics = Metrics()
-    bus = EventBus(metrics=metrics)
+    bus = EventBus(metrics=metrics, event_store=JsonlEventStore(DEFAULT_EVENT_STORE))
 
     async def on_system(event: Event) -> None:
         print("[system]", event.to_json())
@@ -52,7 +55,7 @@ async def _cmd_demo(guard_config_path: Path) -> None:
 
 async def _cmd_benchmark(guard_config_path: Path) -> None:
     metrics = Metrics()
-    bus = EventBus(metrics=metrics)
+    bus = EventBus(metrics=metrics, event_store=JsonlEventStore(DEFAULT_EVENT_STORE))
 
     async def on_system(_: Event) -> None:
         return
@@ -80,6 +83,15 @@ async def _cmd_benchmark(guard_config_path: Path) -> None:
     await bus.stop()
 
 
+def _cmd_replay_store() -> None:
+    store = JsonlEventStore(DEFAULT_EVENT_STORE)
+    rows = list(store.replay())
+    by_topic: dict[str, int] = {}
+    for topic, _ in rows:
+        by_topic[topic] = by_topic.get(topic, 0) + 1
+    print(json.dumps({"store": str(DEFAULT_EVENT_STORE), "events": len(rows), "topics": by_topic}, ensure_ascii=False))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="AIOS core tools")
     parser.add_argument(
@@ -90,6 +102,7 @@ def main() -> None:
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("demo", help="run phase-1 demo flow")
     sub.add_parser("benchmark", help="run mini benchmark and output JSON metrics")
+    sub.add_parser("replay-store", help="summarize persisted events from local JSONL store")
 
     args = parser.parse_args()
     guard_cfg = Path(args.guard_config)
@@ -98,6 +111,8 @@ def main() -> None:
         asyncio.run(_cmd_demo(guard_cfg))
     elif args.cmd == "benchmark":
         asyncio.run(_cmd_benchmark(guard_cfg))
+    elif args.cmd == "replay-store":
+        _cmd_replay_store()
 
 
 if __name__ == "__main__":

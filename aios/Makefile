@@ -1,4 +1,4 @@
-.PHONY: demo bench report test learning
+.PHONY: demo bench report test learning replay-store
 
 PYTHONPATH_SRC=PYTHONPATH=src
 
@@ -16,3 +16,6 @@ test:
 
 learning:
 	$(PYTHONPATH_SRC) python3 -m aios_core.cli --guard-config config/guard-learning.json demo
+
+replay-store:
+	$(PYTHONPATH_SRC) python3 -m aios_core.cli replay-store

@@ -1,1 +1,1 @@
-__all__ = ["events", "bus", "runtime", "guard", "metrics", "config"]
+__all__ = ["events", "bus", "runtime", "guard", "metrics", "config", "event_store"]

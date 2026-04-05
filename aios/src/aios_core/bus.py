@@ -8,6 +8,7 @@ from typing import Awaitable, Callable
 
 from .events import Event
 from .metrics import Metrics
+from .event_store import JsonlEventStore
 
 EventHandler = Callable[[Event], Awaitable[None]]
 
@@ -21,9 +22,15 @@ class BusConfig:
 class EventBus:
     """In-memory pub/sub bus for phase-1 MVP with retry and dead-letter support."""
 
-    def __init__(self, config: BusConfig | None = None, metrics: Metrics | None = None) -> None:
+    def __init__(
+        self,
+        config: BusConfig | None = None,
+        metrics: Metrics | None = None,
+        event_store: JsonlEventStore | None = None,
+    ) -> None:
         self.config = config or BusConfig()
         self.metrics = metrics or Metrics()
+        self.event_store = event_store
         self._queues: dict[str, asyncio.Queue[Event]] = defaultdict(asyncio.Queue)
         self._tasks: list[asyncio.Task] = []
         self._seen_ids: set[str] = set()
@@ -80,6 +87,8 @@ class EventBus:
 
     async def publish(self, topic: str, event: Event) -> None:
         self._published_at.setdefault(event.id, time.monotonic())
+        if self.event_store is not None:
+            self.event_store.append(topic, event)
         await self._queues[topic].put(event)
 
     async def stop(self) -> None:
