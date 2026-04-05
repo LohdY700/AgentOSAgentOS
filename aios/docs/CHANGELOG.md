@@ -10,6 +10,7 @@
 - Added Make targets for preset runs (`demo-lowram`, `bench-throughput`, etc.).
 - Added `doctor` self-check command for guard/store config + writable probe.
 - Added `make ci-smoke` target (test + doctor + benchmark) and wired CI workflow to use it.
+- Added `make release-check` target (ci-smoke + report + replay-store) for pre-publish flow.
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.

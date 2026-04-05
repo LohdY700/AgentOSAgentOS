@@ -42,3 +42,8 @@ ci-smoke:
 	$(MAKE) test
 	$(MAKE) doctor
 	$(MAKE) bench
+
+release-check:
+	$(MAKE) ci-smoke
+	$(MAKE) report
+	$(MAKE) replay-store

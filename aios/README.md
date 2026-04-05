@@ -53,6 +53,7 @@ make demo-lowram
 make bench-throughput
 make doctor
 make ci-smoke
+make release-check
 ```
 
 (hoặc chạy tay)

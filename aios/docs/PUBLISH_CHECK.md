@@ -3,8 +3,7 @@
 ## 1) Sanity
 ```bash
 cd /home/lohd/.openclaw/workspace-main/aios
-make test
-make demo
+make release-check
 ```
 
 ## 2) Confirm release docs exist
