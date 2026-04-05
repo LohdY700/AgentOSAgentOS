@@ -15,6 +15,7 @@ from .guard import ProcessGuard
 from .metrics import Metrics
 from .store_config import load_event_store_config
 from .doctor import render_doctor_json, doctor_exit_code
+from .dashboard import run_dashboard
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
