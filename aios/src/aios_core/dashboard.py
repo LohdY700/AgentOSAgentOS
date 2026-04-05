@@ -296,7 +296,7 @@ DASHBOARD_HTML = """<!doctype html>
 DASHBOARD_JS = """
 function statusPill(s) {
   const c = (s === 'active') ? 'active' : (s === 'idle' ? 'idle' : 'down');
-  return `<span class="pill ${c}">${s}</span>`;
+  return '<span class="pill ' + c + '">' + s + '</span>';
 }
 
 function toggleStoreRaw() {
@@ -351,8 +351,8 @@ function updateLifeMeta(eventCount) {
   const seg = Math.min(24, 1 + Math.floor((eventCount || 0) / 100));
   life.targetLen = seg;
   const stage = seg <= 2 ? 'head-only' : (seg <= 8 ? 'growing' : 'evolved');
-  document.getElementById('life-stage').innerHTML = `<b>Stage:</b> ${stage}`;
-  document.getElementById('life-length').innerHTML = `<b>Length:</b> ${seg}`;
+  document.getElementById('life-stage').innerHTML = '<b>Stage:</b> ' + stage;
+  document.getElementById('life-length').innerHTML = '<b>Length:</b> ' + seg;
 }
 
 function renderNextSteps(data) {
@@ -368,7 +368,7 @@ function renderNextSteps(data) {
   }
 
   if (guardAlerts > 0) {
-    steps.push(`🔎 Có ${guardAlerts} security events, nên xem mục Recent Events.`);
+    steps.push('🔎 Có ' + guardAlerts + ' security events, nên xem mục Recent Events.');
   } else {
     steps.push('🛡️ Chưa thấy cảnh báo security mới.');
   }
@@ -395,11 +395,11 @@ function buildPublicStatusText(data) {
   const agents = ((data && data.agents) || []).length;
   return [
     'AIOS Status Snapshot',
-    `- Health: ${ok ? 'Healthy' : 'Warning'}`,
-    `- Active Agents tracked: ${agents}`,
-    `- Total events: ${events}`,
-    `- Security events: ${security}`,
-    `- Time: ${new Date().toLocaleString()}`,
+    '- Health: ' + (ok ? 'Healthy' : 'Warning'),
+    '- Active Agents tracked: ' + agents,
+    '- Total events: ' + events,
+    '- Security events: ' + security,
+    '- Time: ' + new Date().toLocaleString(),
   ].join('\n');
 }
 
@@ -432,7 +432,7 @@ async function runBenchmark() {
     return;
   }
   const b = data.benchmark || {};
-  document.getElementById('action-result').textContent = `✅ Benchmark done | p95: ${b.event_latency_p95} ms | throughput: ${b.event_throughput}`;
+  document.getElementById('action-result').textContent = '✅ Benchmark done | p95: ' + b.event_latency_p95 + ' ms | throughput: ' + b.event_throughput;
   await refresh();
 }
 
@@ -452,13 +452,13 @@ async function refresh() {
   tbody.innerHTML = '';
   for (const a of (data.agents || [])) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${a.name}</td><td>${statusPill(a.status)}</td><td>${a.events}</td><td>${a.last_type || ''}</td><td>${a.last_seen || ''}</td>`;
+    tr.innerHTML = '<td>' + a.name + '</td><td>' + statusPill(a.status) + '</td><td>' + a.events + '</td><td>' + (a.last_type || '') + '</td><td>' + (a.last_seen || '') + '</td>';
     tbody.appendChild(tr);
   }
 
   const ap = data.approval || {};
   document.getElementById('approval-brief').textContent =
-    `Tier1 auto: ${ap.tier1_count || 0} | Tier2 owner: ${ap.tier2_count || 0} | Pre-approval: ${ap.preapproval_enabled ? 'ON' : 'OFF'} (${ap.preapproval_max_minutes || 0}m)`;
+    'Tier1 auto: ' + (ap.tier1_count || 0) + ' | Tier2 owner: ' + (ap.tier2_count || 0) + ' | Pre-approval: ' + (ap.preapproval_enabled ? 'ON' : 'OFF') + ' (' + (ap.preapproval_max_minutes || 0) + 'm)';
 
   const storeSummary = {
     path: data.store.path,
@@ -466,14 +466,14 @@ async function refresh() {
     topics: data.store.topics,
   };
   document.getElementById('store-brief').textContent =
-    `Events: ${data.store.events} | Topics: ${Object.keys(data.store.topics || {}).length}`;
+    'Events: ' + data.store.events + ' | Topics: ' + Object.keys(data.store.topics || {}).length;
   document.getElementById('store').textContent = JSON.stringify({
     ...storeSummary,
     checks: data.doctor.checks,
   }, null, 2);
 
     const recentCount = (data.store.recent || []).length;
-    document.getElementById('recent-brief').textContent = `Hiển thị ${recentCount} events gần nhất`;
+    document.getElementById('recent-brief').textContent = 'Hiển thị ' + recentCount + ' events gần nhất';
     document.getElementById('recent').textContent = JSON.stringify(data.store.recent, null, 2);
   } catch (err) {
     document.getElementById('health').className = 'bad';
