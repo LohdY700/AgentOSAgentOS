@@ -50,13 +50,11 @@ class LangChainVectorMemoryBackend(BaseMemoryBackend):
         try:
             from langchain_community.vectorstores import FAISS
             from langchain_community.embeddings import HuggingFaceEmbeddings
-            from langchain.docstore.document import Document
         except Exception as exc:  # noqa: BLE001
             raise RuntimeError("langchain backend unavailable (install langchain-community + sentence-transformers + faiss-cpu)") from exc
 
         self._FAISS = FAISS
         self._Emb = HuggingFaceEmbeddings
-        self._Doc = Document
         self.store_dir = Path(store_dir)
         self.store_dir.mkdir(parents=True, exist_ok=True)
         self.collection = collection
@@ -90,9 +88,18 @@ class MemoryBackendHandle:
     note: str = ""
 
 
+_BACKEND_CACHE: dict[str, MemoryBackendHandle] = {}
+
+
 def load_memory_backend(root_dir: Path) -> MemoryBackendHandle:
     cfg_path = root_dir / "config" / "memory-backend.json"
-    cfg = json.loads(cfg_path.read_text(encoding="utf-8")) if cfg_path.exists() else {}
+    cfg_raw = cfg_path.read_text(encoding="utf-8") if cfg_path.exists() else "{}"
+    cache_key = str(root_dir.resolve()) + "::" + cfg_raw
+    cached = _BACKEND_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    cfg = json.loads(cfg_raw) if cfg_raw.strip() else {}
 
     requested = str(cfg.get("backend", "local")).lower()
     fallback = str(cfg.get("fallback", "local")).lower()
@@ -106,16 +113,22 @@ def load_memory_backend(root_dir: Path) -> MemoryBackendHandle:
                 store_dir=root_dir / lc.get("store_dir", "data/langchain-memory"),
                 collection=str(lc.get("collection", "aios_memory")),
             )
-            return MemoryBackendHandle(backend=backend, requested=requested, active="langchain", fallback_used=False)
+            h = MemoryBackendHandle(backend=backend, requested=requested, active="langchain", fallback_used=False)
+            _BACKEND_CACHE[cache_key] = h
+            return h
         except Exception as exc:  # noqa: BLE001
             if fallback == "local":
-                return MemoryBackendHandle(
+                h = MemoryBackendHandle(
                     backend=local_backend,
                     requested=requested,
                     active="local",
                     fallback_used=True,
                     note=str(exc),
                 )
+                _BACKEND_CACHE[cache_key] = h
+                return h
             raise
 
-    return MemoryBackendHandle(backend=local_backend, requested=requested, active="local", fallback_used=False)
+    h = MemoryBackendHandle(backend=local_backend, requested=requested, active="local", fallback_used=False)
+    _BACKEND_CACHE[cache_key] = h
+    return h

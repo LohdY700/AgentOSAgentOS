@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import aios_core.memory_backend as memory_backend
 from aios_core.memory_backend import LocalJsonlMemoryBackend, load_memory_backend
 
 
@@ -26,7 +27,19 @@ class MemoryBackendTests(unittest.TestCase):
                 '{"backend":"langchain","fallback":"local","local_path":"data/memory-local.jsonl"}',
                 encoding="utf-8",
             )
-            h = load_memory_backend(root)
+
+            original = memory_backend.LangChainVectorMemoryBackend
+
+            class _BrokenLangChain:
+                def __init__(self, *args, **kwargs) -> None:
+                    raise RuntimeError("forced failure")
+
+            memory_backend.LangChainVectorMemoryBackend = _BrokenLangChain
+            try:
+                h = load_memory_backend(root)
+            finally:
+                memory_backend.LangChainVectorMemoryBackend = original
+
             self.assertEqual(h.requested, "langchain")
             self.assertEqual(h.active, "local")
             self.assertTrue(h.fallback_used)
