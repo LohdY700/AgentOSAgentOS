@@ -106,6 +106,7 @@ make dashboard
 ```
 Trang này hiển thị trạng thái Healthy/Warning, bảng Active Agents (active/idle/down), Approval Policy tóm tắt, summary event store và 20 events gần nhất.
 Có nút thao tác trực tiếp: **Run Health Check** và **Run Benchmark**.
+Có thêm **Learning Inbox**: dán link, bấm **Add Link** rồi **Learn Now** để tạo ghi chú học tập.
 
 Output benchmark sẽ trả JSON với 5 metrics cốt lõi:
 - `event_throughput`

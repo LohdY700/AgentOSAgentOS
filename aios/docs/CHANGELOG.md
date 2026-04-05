@@ -16,6 +16,7 @@
 - Added 2-tier approval policy docs + config and dashboard approval summary card.
 - Added dashboard action buttons for non-technical users (`Run Health Check`, `Run Benchmark`).
 - Added dashboard quick guidance card (`What to do now`) and `Copy Public Status` button.
+- Added Learning Inbox flow (`Add Link` + `Learn Now`) with persisted learning notes.
 - Added API endpoint `/api/approval/check?action=...` for policy decision queries.
 
 ## v0.1.1

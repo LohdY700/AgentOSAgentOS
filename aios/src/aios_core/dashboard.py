@@ -14,6 +14,7 @@ from .event_store import JsonlEventStore
 from .store_config import load_event_store_config
 from .approval import load_policy, classify_action
 from .learning import LearningInbox
+from .learning_process import process_learning_inbox
 
 
 def _parse_iso(ts: str) -> datetime:
@@ -89,6 +90,17 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
     learning = LearningInbox(root_dir / "data" / "learning-inbox.jsonl")
     learning_recent = learning.list_recent(limit=10)
 
+    notes_path = root_dir / "data" / "learning-notes.jsonl"
+    notes_recent: list[dict[str, Any]] = []
+    if notes_path.exists():
+        for line in notes_path.read_text(encoding="utf-8").splitlines()[-10:]:
+            if not line.strip():
+                continue
+            try:
+                notes_recent.append(json.loads(line))
+            except Exception:
+                pass
+
     return {
         "doctor": doctor,
         "approval": {
@@ -107,6 +119,8 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
         "learning": {
             "count": len(learning_recent),
             "recent": learning_recent,
+            "notes_count": len(notes_recent),
+            "notes_recent": notes_recent,
         },
     }
 
@@ -223,6 +237,12 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                 except Exception as exc:  # noqa: BLE001
                     self._send_json({"ok": False, "error": str(exc)}, code=500)
                 return
+            if parsed.path == "/api/learn/process":
+                try:
+                    self._send_json(process_learning_inbox(root_dir, limit=5))
+                except Exception as exc:  # noqa: BLE001
+                    self._send_json({"ok": False, "error": str(exc)}, code=500)
+                return
             self._send_json({"error": "not found"}, code=404)
 
         def log_message(self, fmt: str, *args):
@@ -283,6 +303,7 @@ DASHBOARD_HTML = """<!doctype html>
       <input id='learn-url' placeholder='Dán link để AIOS học' style='flex:1;min-width:280px;padding:8px;border:1px solid #ddd;border-radius:8px;' />
       <input id='learn-note' placeholder='Ghi chú (tuỳ chọn)' style='flex:1;min-width:220px;padding:8px;border:1px solid #ddd;border-radius:8px;' />
       <button onclick='addLearningLink()'>Add Link</button>
+      <button onclick='processLearningNow()'>Learn Now</button>
     </div>
     <div id='learn-result' style='margin-top:8px;color:#444;'></div>
     <div id='learn-brief' style='margin-top:8px;color:#444;'>Đang tải...</div>
@@ -483,6 +504,17 @@ async function addLearningLink() {
   await refresh();
 }
 
+async function processLearningNow() {
+  const res = await fetch('/api/learn/process', { method: 'POST' });
+  const data = await res.json();
+  if (!data.ok) {
+    document.getElementById('learn-result').textContent = '⚠️ Learn failed: ' + (data.error || 'unknown');
+    return;
+  }
+  document.getElementById('learn-result').textContent = '✅ Learn done | processed: ' + data.processed + ' | written: ' + data.written;
+  await refresh();
+}
+
 async function runHealthCheck() {
   const res = await fetch('/api/run/doctor', { method: 'POST' });
   const data = await res.json();
@@ -529,7 +561,7 @@ async function refresh() {
   const learn = data.learning || {};
   const lr = learn.recent || [];
   const latest = lr.length ? lr[lr.length - 1].url : 'chưa có link';
-  document.getElementById('learn-brief').textContent = 'Inbox: ' + (learn.count || 0) + ' link | Mới nhất: ' + latest;
+  document.getElementById('learn-brief').textContent = 'Inbox: ' + (learn.count || 0) + ' link | Learned notes: ' + (learn.notes_count || 0) + ' | Mới nhất: ' + latest;
 
   const storeSummary = {
     path: data.store.path,
