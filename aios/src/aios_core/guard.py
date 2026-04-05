@@ -5,13 +5,14 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from .events import Event
 from .bus import EventBus
+from .events import Event
 
 
 @dataclass(slots=True)
 class GuardConfig:
     allowed: set[str]
+    allowed_prefixes: tuple[str, ...] = ()
     poll_sec: float = 2.0
     mode: str = "strict"  # strict|learning
     learning_output: Path | None = None
@@ -26,9 +27,14 @@ class ProcessGuard:
         out = subprocess.check_output(["ps", "-eo", "comm="], text=True)
         return {line.strip() for line in out.splitlines() if line.strip()}
 
+    def _is_allowed(self, proc: str) -> bool:
+        if proc in self.config.allowed:
+            return True
+        return any(proc.startswith(prefix) for prefix in self.config.allowed_prefixes)
+
     async def watch_once(self) -> list[str]:
         current = self._list_process_names()
-        unknown = sorted(p for p in current if p not in self.config.allowed)
+        unknown = sorted(p for p in current if not self._is_allowed(p))
 
         if self.config.mode == "learning":
             if self.config.learning_output:

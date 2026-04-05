@@ -25,6 +25,19 @@ class GuardTests(unittest.IsolatedAsyncioTestCase):
             self.assertGreaterEqual(len(unknown), 1)
             self.assertTrue(len(content.strip()) > 0)
 
+    async def test_prefix_allowlist_filters_dynamic_kernel_workers(self) -> None:
+        bus = EventBus()
+        guard = ProcessGuard(
+            GuardConfig(allowed={"python3"}, allowed_prefixes=("kworker/",), mode="strict"),
+            bus,
+        )
+
+        guard._list_process_names = lambda: {"python3", "kworker/1:2-events", "weird-proc"}  # type: ignore[method-assign]
+        unknown = await guard.watch_once()
+        await bus.stop()
+
+        self.assertEqual(unknown, ["weird-proc"])
+
 
 if __name__ == "__main__":
     unittest.main()

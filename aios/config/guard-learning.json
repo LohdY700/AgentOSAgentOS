@@ -8,6 +8,9 @@
     "sh",
     "sleep"
   ],
+  "allowed_prefixes": [
+    "kworker/"
+  ],
   "poll_sec": 2.0,
   "learning_output": "config/guard-learning-candidates.txt"
 }
