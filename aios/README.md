@@ -1,5 +1,7 @@
 # AIOS (AI-native OS) — Bootstrap Pack
 
+![CI](https://github.com/LohdY700/AgentOSAgentOS/actions/workflows/ci.yml/badge.svg)
+
 Mục tiêu: biến bản demo 65MB/5s boot thành hệ thống có thể demo công khai + có đường lên production.
 
 ## Trạng thái hiện tại
@@ -57,6 +59,15 @@ make ci-smoke
 make release-check
 make dashboard
 ```
+
+## CI Profiles
+- `test-and-smoke`:
+  - chạy smoke local target (`make ci-smoke`)
+  - tạo benchmark report (`make report`)
+- `memory-profile`:
+  - cài optional deps memory (`pip install -e ".[memory]"`)
+  - chạy test đầy đủ (`make test`)
+  - chạy doctor check gồm memory backend read/write (`python -m aios_core.cli doctor`)
 
 (hoặc chạy tay)
 ```bash
