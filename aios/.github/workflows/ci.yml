@@ -53,3 +53,6 @@ jobs:
 
       - name: Run doctor checks (includes memory backend read/write)
         run: PYTHONPATH=src python -m aios_core.cli doctor
+
+      - name: Enforce memory latency threshold (p95)
+        run: make bench-memory-check

@@ -56,6 +56,7 @@ make demo-lowram
 make bench-throughput
 make doctor
 make bench-memory
+make bench-memory-check
 make ci-smoke
 make release-check
 make dashboard
