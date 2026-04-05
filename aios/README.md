@@ -152,6 +152,11 @@ Nếu muốn lưu lâu dài, thêm vào shell profile (`~/.bashrc` / `~/.zshrc`)
 export HF_TOKEN=hf_xxx_your_token
 ```
 
+Hoặc copy nhanh file mẫu env:
+```bash
+cp .env.example .env
+```
+
 Output benchmark sẽ trả JSON với 5 metrics cốt lõi:
 - `event_throughput`
 - `event_latency_p95`
