@@ -49,9 +49,14 @@ class LangChainVectorMemoryBackend(BaseMemoryBackend):
     def __init__(self, store_dir: str | Path, collection: str = "aios_memory") -> None:
         try:
             from langchain_community.vectorstores import FAISS
-            from langchain_community.embeddings import HuggingFaceEmbeddings
+            try:
+                from langchain_huggingface import HuggingFaceEmbeddings
+            except Exception:  # noqa: BLE001
+                from langchain_community.embeddings import HuggingFaceEmbeddings
         except Exception as exc:  # noqa: BLE001
-            raise RuntimeError("langchain backend unavailable (install langchain-community + sentence-transformers + faiss-cpu)") from exc
+            raise RuntimeError(
+                "langchain backend unavailable (install langchain-community + langchain-huggingface + sentence-transformers + faiss-cpu)"
+            ) from exc
 
         self._FAISS = FAISS
         self._Emb = HuggingFaceEmbeddings
