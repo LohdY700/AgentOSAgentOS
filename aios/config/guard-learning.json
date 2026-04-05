@@ -1,5 +1,5 @@
 {
-  "mode": "strict",
+  "mode": "learning",
   "allowed": [
     "systemd",
     "bash",

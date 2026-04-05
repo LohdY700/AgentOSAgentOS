@@ -29,15 +29,32 @@ Mục tiêu: biến bản demo 65MB/5s boot thành hệ thống có thể demo c
 ## Quickstart (Phase 1 skeleton)
 ```bash
 cd aios
+make demo
+make bench
+make report
+make test
+```
+
+(hoặc chạy tay)
+```bash
 PYTHONPATH=src python3 -m aios_core.cli demo
 PYTHONPATH=src python3 -m aios_core.cli benchmark
 python3 scripts/benchmark.py
 python3 scripts/benchmark_report.py
 ```
 
-Guard mode config ở `config/guard-allowlist.json`:
+Guard mode config:
+- `config/guard-allowlist.json` (strict mặc định)
+- `config/guard-learning.json` (learning mode)
+
+Mode:
 - `strict`: emit anomaly event theo từng process lạ
 - `learning`: ghi danh sách process lạ ra `learning_output` để tinh chỉnh allowlist
+
+Promote candidates:
+```bash
+python3 scripts/merge_allowlist.py
+```
 
 Output benchmark sẽ trả JSON với 5 metrics cốt lõi:
 - `event_throughput`
