@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import resource
+import time
 from pathlib import Path
 
 from .bus import EventBus
@@ -16,8 +17,12 @@ from .metrics import Metrics
 from .store_config import load_event_store_config
 from .doctor import render_doctor_json, doctor_exit_code
 from .dashboard import run_dashboard
+from .memory_backend import load_memory_backend
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_GUARD_CONFIG = ROOT_DIR / "config" / "guard-allowlist.json"
@@ -97,6 +102,37 @@ async def _cmd_benchmark(guard_config_path: Path, store_config_path: Path) -> No
     await bus.stop()
 
 
+
+
+def _cmd_memory_benchmark(root_dir: Path, query: str, loops: int) -> None:
+    mem = load_memory_backend(root_dir)
+    probe = "memory-benchmark-probe"
+    mem.backend.add(probe, {"kind": "benchmark_probe"})
+
+    loops = max(1, int(loops))
+    latencies: list[float] = []
+    for _ in range(loops):
+        t0 = time.perf_counter()
+        mem.backend.search(query, limit=5)
+        latencies.append((time.perf_counter() - t0) * 1000)
+
+    latencies.sort()
+    p50 = latencies[int(0.5 * (len(latencies) - 1))]
+    p95 = latencies[int(0.95 * (len(latencies) - 1))]
+    out = {
+        "ok": True,
+        "backend": mem.active,
+        "loops": loops,
+        "query": query,
+        "latency_ms": {
+            "avg": round(sum(latencies) / len(latencies), 3),
+            "p50": round(p50, 3),
+            "p95": round(p95, 3),
+            "max": round(max(latencies), 3),
+        },
+    }
+    print(json.dumps(out, ensure_ascii=False))
+
 def _cmd_replay_store(store_config_path: Path) -> None:
     store = _build_store(store_config_path)
     rows = list(store.replay())
@@ -123,6 +159,9 @@ def main() -> None:
     sub.add_parser("benchmark", help="run mini benchmark and output JSON metrics")
     sub.add_parser("replay-store", help="summarize persisted events from local JSONL store")
     sub.add_parser("doctor", help="run self-check on guard/store configs and write access")
+    mem_bench = sub.add_parser("memory-benchmark", help="benchmark memory search latency")
+    mem_bench.add_argument("--query", default="sếp", help="query string for memory search")
+    mem_bench.add_argument("--loops", type=int, default=20, help="number of repeated searches")
     dash = sub.add_parser("dashboard", help="start local web dashboard for non-technical users")
     dash.add_argument("--host", default="127.0.0.1")
     dash.add_argument("--port", type=int, default=8787)
@@ -142,6 +181,8 @@ def main() -> None:
         raise SystemExit(doctor_exit_code(ROOT_DIR, guard_cfg, store_cfg))
     elif args.cmd == "dashboard":
         run_dashboard(args.host, args.port, ROOT_DIR, guard_cfg, store_cfg)
+    elif args.cmd == "memory-benchmark":
+        _cmd_memory_benchmark(ROOT_DIR, args.query, args.loops)
 
 
 if __name__ == "__main__":

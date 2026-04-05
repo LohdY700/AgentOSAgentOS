@@ -29,6 +29,8 @@
 - Added optional dependency group `.[memory]` in `pyproject.toml` for reproducible setup.
 - Added CI `memory-profile` job to validate `.[memory]` install + test + doctor checks.
 - Updated README with CI badge and `CI Profiles` section.
+- Added memory startup controls (`quiet_startup`, `preload_on_startup`) and exposed memory init timing/cache flags in dashboard status.
+- Added CLI command `memory-benchmark` and `make bench-memory` for memory search latency tracking.
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.

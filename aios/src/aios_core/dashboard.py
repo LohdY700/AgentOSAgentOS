@@ -156,6 +156,8 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
             "active": mem.active,
             "fallback_used": mem.fallback_used,
             "note": mem.note,
+            "init_ms": round(float(mem.init_ms), 2),
+            "cache_hit": bool(mem.cache_hit),
         },
     }
 
@@ -358,6 +360,17 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
 
 
 def run_dashboard(host: str, port: int, root_dir: Path, guard_config_path: Path, store_config_path: Path) -> None:
+    cfg_path = root_dir / "config" / "memory-backend.json"
+    cfg = json.loads(cfg_path.read_text(encoding="utf-8")) if cfg_path.exists() else {}
+    lc = cfg.get("langchain", {}) if isinstance(cfg, dict) else {}
+    preload = bool(lc.get("preload_on_startup", True))
+    if preload:
+        mem = load_memory_backend(root_dir)
+        print(
+            f"memory backend ready: requested={mem.requested} active={mem.active} "
+            f"fallback={mem.fallback_used} init_ms={mem.init_ms:.2f} cache_hit={mem.cache_hit}"
+        )
+
     server = ThreadingHTTPServer((host, port), make_handler(root_dir, guard_config_path, store_config_path))
     print(f"AIOS dashboard running at http://{host}:{port}")
     server.serve_forever()

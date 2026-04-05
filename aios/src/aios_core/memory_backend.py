@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
+import time
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -46,7 +50,15 @@ class LocalJsonlMemoryBackend(BaseMemoryBackend):
 class LangChainVectorMemoryBackend(BaseMemoryBackend):
     name = "langchain"
 
-    def __init__(self, store_dir: str | Path, collection: str = "aios_memory") -> None:
+    def __init__(self, store_dir: str | Path, collection: str = "aios_memory", quiet_startup: bool = True) -> None:
+        if quiet_startup:
+            os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+            os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+            os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
+            logging.getLogger("transformers").setLevel(logging.ERROR)
+            logging.getLogger("sentence_transformers").setLevel(logging.ERROR)
+            logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
+            warnings.filterwarnings("ignore", message=".*unauthenticated requests to the HF Hub.*")
         try:
             from langchain_community.vectorstores import FAISS
             try:
@@ -91,6 +103,8 @@ class MemoryBackendHandle:
     active: str
     fallback_used: bool
     note: str = ""
+    init_ms: float = 0.0
+    cache_hit: bool = False
 
 
 _BACKEND_CACHE: dict[str, MemoryBackendHandle] = {}
@@ -102,7 +116,10 @@ def load_memory_backend(root_dir: Path) -> MemoryBackendHandle:
     cache_key = str(root_dir.resolve()) + "::" + cfg_raw
     cached = _BACKEND_CACHE.get(cache_key)
     if cached is not None:
+        cached.cache_hit = True
         return cached
+
+    started = time.perf_counter()
 
     cfg = json.loads(cfg_raw) if cfg_raw.strip() else {}
 
@@ -117,23 +134,28 @@ def load_memory_backend(root_dir: Path) -> MemoryBackendHandle:
             backend = LangChainVectorMemoryBackend(
                 store_dir=root_dir / lc.get("store_dir", "data/langchain-memory"),
                 collection=str(lc.get("collection", "aios_memory")),
+                quiet_startup=bool(lc.get("quiet_startup", True)),
             )
-            h = MemoryBackendHandle(backend=backend, requested=requested, active="langchain", fallback_used=False)
+            elapsed_ms = (time.perf_counter() - started) * 1000
+            h = MemoryBackendHandle(backend=backend, requested=requested, active="langchain", fallback_used=False, init_ms=elapsed_ms)
             _BACKEND_CACHE[cache_key] = h
             return h
         except Exception as exc:  # noqa: BLE001
             if fallback == "local":
+                elapsed_ms = (time.perf_counter() - started) * 1000
                 h = MemoryBackendHandle(
                     backend=local_backend,
                     requested=requested,
                     active="local",
                     fallback_used=True,
                     note=str(exc),
+                    init_ms=elapsed_ms,
                 )
                 _BACKEND_CACHE[cache_key] = h
                 return h
             raise
 
-    h = MemoryBackendHandle(backend=local_backend, requested=requested, active="local", fallback_used=False)
+    elapsed_ms = (time.perf_counter() - started) * 1000
+    h = MemoryBackendHandle(backend=local_backend, requested=requested, active="local", fallback_used=False, init_ms=elapsed_ms)
     _BACKEND_CACHE[cache_key] = h
     return h

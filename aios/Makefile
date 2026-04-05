@@ -1,4 +1,4 @@
-.PHONY: demo bench report test learning replay-store store-prune demo-lowram bench-lowram demo-throughput bench-throughput doctor ci-smoke release-check dashboard
+.PHONY: demo bench report test learning replay-store store-prune demo-lowram bench-lowram demo-throughput bench-throughput doctor bench-memory ci-smoke release-check dashboard
 
 PYTHON_BIN:=$(shell if [ -x .venv/bin/python ]; then echo .venv/bin/python; else echo python3; fi)
 PYTHONPATH_SRC=PYTHONPATH=src
@@ -38,6 +38,9 @@ bench-throughput:
 
 doctor:
 	$(PYTHONPATH_SRC) $(PYTHON_BIN) -m aios_core.cli doctor
+
+bench-memory:
+	$(PYTHONPATH_SRC) $(PYTHON_BIN) -m aios_core.cli memory-benchmark --query "sếp" --loops 20
 
 ci-smoke:
 	$(MAKE) test

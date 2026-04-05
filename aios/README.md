@@ -55,6 +55,7 @@ make store-prune
 make demo-lowram
 make bench-throughput
 make doctor
+make bench-memory
 make ci-smoke
 make release-check
 make dashboard
@@ -122,6 +123,9 @@ Có thêm **Chat Training Examples** để nạp ví dụ hội thoại (user/as
 Có thêm feedback nhanh **👍/👎** để tính quality score hội thoại theo thời gian.
 Dashboard cũng hiển thị **Top 3 insights hôm nay** từ learning notes.
 Memory backend hỗ trợ cấu hình `langchain` (có fallback local), xem ở `config/memory-backend.json`.
+Có thể bật/tắt preload + giảm noise startup qua:
+- `langchain.quiet_startup` (mặc định `true`)
+- `langchain.preload_on_startup` (mặc định `true`)
 
 Production setup cho memory:
 ```bash

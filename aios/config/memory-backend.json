@@ -4,6 +4,8 @@
   "local_path": "data/memory-local.jsonl",
   "langchain": {
     "store_dir": "data/langchain-memory",
-    "collection": "aios_memory"
+    "collection": "aios_memory",
+    "quiet_startup": true,
+    "preload_on_startup": true
   }
 }
