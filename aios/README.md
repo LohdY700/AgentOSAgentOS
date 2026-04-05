@@ -74,6 +74,7 @@ python3 scripts/merge_allowlist.py
 
 Event đã publish được append vào local JSONL store: `data/events.jsonl`.
 Store có auto-prune mặc định (khi vượt ngưỡng sẽ giữ lại phần mới nhất) và có thể prune tay.
+Ngưỡng này chỉnh trong `config/event-store.json` (`max_lines`, `keep_last`, `prune_check_every`).
 Có thể xem thống kê nhanh bằng:
 ```bash
 make replay-store

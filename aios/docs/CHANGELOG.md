@@ -4,6 +4,8 @@
 - Added local event-store pruning script (`scripts/prune_event_store.py`).
 - Added `make store-prune` target.
 - Added unit test for prune behavior.
+- Added tunable event-store config via `config/event-store.json`.
+- CLI now supports `--store-config` for per-device thresholds.
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.

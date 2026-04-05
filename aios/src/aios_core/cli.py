@@ -13,18 +13,30 @@ from .events import Event
 from .event_store import JsonlEventStore
 from .guard import ProcessGuard
 from .metrics import Metrics
+from .store_config import load_event_store_config
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_GUARD_CONFIG = ROOT_DIR / "config" / "guard-allowlist.json"
-DEFAULT_EVENT_STORE = ROOT_DIR / "data" / "events.jsonl"
+DEFAULT_STORE_CONFIG = ROOT_DIR / "config" / "event-store.json"
 
 
-async def _cmd_demo(guard_config_path: Path) -> None:
+def _build_store(store_config_path: Path) -> JsonlEventStore:
+    cfg = load_event_store_config(store_config_path)
+    store_path = cfg.path if cfg.path.is_absolute() else ROOT_DIR / cfg.path
+    return JsonlEventStore(
+        store_path,
+        max_lines=cfg.max_lines,
+        keep_last=cfg.keep_last,
+        prune_check_every=cfg.prune_check_every,
+    )
+
+
+async def _cmd_demo(guard_config_path: Path, store_config_path: Path) -> None:
     print("AIOS demo starting")
     metrics = Metrics()
-    bus = EventBus(metrics=metrics, event_store=JsonlEventStore(DEFAULT_EVENT_STORE))
+    bus = EventBus(metrics=metrics, event_store=_build_store(store_config_path))
 
     async def on_system(event: Event) -> None:
         print("[system]", event.to_json())
@@ -53,9 +65,9 @@ async def _cmd_demo(guard_config_path: Path) -> None:
     await bus.stop()
 
 
-async def _cmd_benchmark(guard_config_path: Path) -> None:
+async def _cmd_benchmark(guard_config_path: Path, store_config_path: Path) -> None:
     metrics = Metrics()
-    bus = EventBus(metrics=metrics, event_store=JsonlEventStore(DEFAULT_EVENT_STORE))
+    bus = EventBus(metrics=metrics, event_store=_build_store(store_config_path))
 
     async def on_system(_: Event) -> None:
         return
@@ -83,13 +95,13 @@ async def _cmd_benchmark(guard_config_path: Path) -> None:
     await bus.stop()
 
 
-def _cmd_replay_store() -> None:
-    store = JsonlEventStore(DEFAULT_EVENT_STORE)
+def _cmd_replay_store(store_config_path: Path) -> None:
+    store = _build_store(store_config_path)
     rows = list(store.replay())
     by_topic: dict[str, int] = {}
     for topic, _ in rows:
         by_topic[topic] = by_topic.get(topic, 0) + 1
-    print(json.dumps({"store": str(DEFAULT_EVENT_STORE), "events": len(rows), "topics": by_topic}, ensure_ascii=False))
+    print(json.dumps({"store": str(store.path), "events": len(rows), "topics": by_topic}, ensure_ascii=False))
 
 
 def main() -> None:
@@ -99,6 +111,11 @@ def main() -> None:
         default=str(DEFAULT_GUARD_CONFIG),
         help="path to guard allowlist json",
     )
+    parser.add_argument(
+        "--store-config",
+        default=str(DEFAULT_STORE_CONFIG),
+        help="path to event store json config",
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("demo", help="run phase-1 demo flow")
     sub.add_parser("benchmark", help="run mini benchmark and output JSON metrics")
@@ -106,13 +123,14 @@ def main() -> None:
 
     args = parser.parse_args()
     guard_cfg = Path(args.guard_config)
+    store_cfg = Path(args.store_config)
 
     if args.cmd == "demo":
-        asyncio.run(_cmd_demo(guard_cfg))
+        asyncio.run(_cmd_demo(guard_cfg, store_cfg))
     elif args.cmd == "benchmark":
-        asyncio.run(_cmd_benchmark(guard_cfg))
+        asyncio.run(_cmd_benchmark(guard_cfg, store_cfg))
     elif args.cmd == "replay-store":
-        _cmd_replay_store()
+        _cmd_replay_store(store_cfg)
 
 
 if __name__ == "__main__":
