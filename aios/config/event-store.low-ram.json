@@ -1,0 +1,6 @@
+{
+  "path": "data/events.jsonl",
+  "max_lines": 1200,
+  "keep_last": 300,
+  "prune_check_every": 50
+}

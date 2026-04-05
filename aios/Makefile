@@ -1,4 +1,4 @@
-.PHONY: demo bench report test learning replay-store store-prune
+.PHONY: demo bench report test learning replay-store store-prune demo-lowram bench-lowram demo-throughput bench-throughput
 
 PYTHONPATH_SRC=PYTHONPATH=src
 
@@ -22,3 +22,15 @@ replay-store:
 
 store-prune:
 	python3 scripts/prune_event_store.py --path data/events.jsonl --keep-last 1000
+
+demo-lowram:
+	$(PYTHONPATH_SRC) python3 -m aios_core.cli --store-config config/event-store.low-ram.json demo
+
+bench-lowram:
+	$(PYTHONPATH_SRC) python3 -m aios_core.cli --store-config config/event-store.low-ram.json benchmark
+
+demo-throughput:
+	$(PYTHONPATH_SRC) python3 -m aios_core.cli --store-config config/event-store.high-throughput.json demo
+
+bench-throughput:
+	$(PYTHONPATH_SRC) python3 -m aios_core.cli --store-config config/event-store.high-throughput.json benchmark

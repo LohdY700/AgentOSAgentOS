@@ -49,6 +49,8 @@ make report
 make test
 make replay-store
 make store-prune
+make demo-lowram
+make bench-throughput
 ```
 
 (hoặc chạy tay)
@@ -75,6 +77,9 @@ python3 scripts/merge_allowlist.py
 Event đã publish được append vào local JSONL store: `data/events.jsonl`.
 Store có auto-prune mặc định (khi vượt ngưỡng sẽ giữ lại phần mới nhất) và có thể prune tay.
 Ngưỡng này chỉnh trong `config/event-store.json` (`max_lines`, `keep_last`, `prune_check_every`).
+Presets sẵn có:
+- `config/event-store.low-ram.json` (thiết bị RAM thấp)
+- `config/event-store.high-throughput.json` (luồng event dày)
 Có thể xem thống kê nhanh bằng:
 ```bash
 make replay-store
