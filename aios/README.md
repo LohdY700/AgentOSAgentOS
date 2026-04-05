@@ -25,3 +25,18 @@ Mục tiêu: biến bản demo 65MB/5s boot thành hệ thống có thể demo c
 - Event-first, deterministic, observable
 - Ưu tiên an toàn khi cho agent quyền “vùng vẫy”
 - Làm nhỏ, đo được, demo được
+
+## Quickstart (Phase 1 skeleton)
+```bash
+cd aios
+PYTHONPATH=src python3 -m aios_core.cli demo
+PYTHONPATH=src python3 -m aios_core.cli benchmark
+python3 scripts/benchmark.py
+```
+
+Output benchmark sẽ trả JSON với 5 metrics cốt lõi:
+- `event_throughput`
+- `event_latency_p95`
+- `agent_restart_count`
+- `guard_alert_count`
+- `memory_idle_mb`
