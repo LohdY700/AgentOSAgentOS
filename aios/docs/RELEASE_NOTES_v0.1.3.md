@@ -3,6 +3,8 @@
 ## Highlights
 - Dashboard UX improved for non-technical users:
   - Added action buttons: **Run Health Check** and **Run Benchmark**.
+  - Added **Copy Public Status** button for quick share text.
+  - Added **What to do now** guidance card.
   - Store/Recent panels now default to friendly summaries with optional JSON expand.
 - Added approval decision API:
   - `GET /api/approval/check?action=<action_name>`

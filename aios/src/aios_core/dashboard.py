@@ -223,7 +223,15 @@ DASHBOARD_HTML = """<!doctype html>
   <button onclick='refresh()'>Refresh</button>
   <button onclick='runHealthCheck()'>Run Health Check</button>
   <button onclick='runBenchmark()'>Run Benchmark</button>
+  <button onclick='copyPublicStatus()'>Copy Public Status</button>
   <div id='action-result' style='margin-top:8px;color:#444;'></div>
+
+  <div class='card'>
+    <h3>What to do now</h3>
+    <ul id='next-steps'>
+      <li>Đang tải gợi ý...</li>
+    </ul>
+  </div>
 
   <div class='card'>
     <h3>AIOS Life Pulse</h3>
@@ -281,6 +289,7 @@ function toggleRecentRaw() {
 }
 
 const life = { angle: 0, targetLen: 1, currentLen: 1 };
+let lastSnapshot = null;
 
 function drawLife() {
   const canvas = document.getElementById('life-canvas');
@@ -325,6 +334,68 @@ function updateLifeMeta(eventCount) {
   document.getElementById('life-length').innerHTML = `<b>Length:</b> ${seg}`;
 }
 
+function renderNextSteps(data) {
+  const steps = [];
+  const ok = !!data?.doctor?.ok;
+  const guardAlerts = Number(data?.store?.topics?.security || 0);
+  const totalEvents = Number(data?.store?.events || 0);
+
+  if (ok) {
+    steps.push('✅ Hệ thống đang ổn định.');
+  } else {
+    steps.push('⚠️ Hệ thống có cảnh báo, nên bấm Run Health Check.');
+  }
+
+  if (guardAlerts > 0) {
+    steps.push(`🔎 Có ${guardAlerts} security events, nên xem mục Recent Events.`);
+  } else {
+    steps.push('🛡️ Chưa thấy cảnh báo security mới.');
+  }
+
+  if (totalEvents < 100) {
+    steps.push('📈 Chạy Run Benchmark để tạo thêm tín hiệu theo dõi.');
+  } else {
+    steps.push('🌱 AIOS đang tích lũy dữ liệu tốt, có thể tiếp tục theo dõi theo ngày.');
+  }
+
+  const ul = document.getElementById('next-steps');
+  ul.innerHTML = '';
+  for (const s of steps) {
+    const li = document.createElement('li');
+    li.textContent = s;
+    ul.appendChild(li);
+  }
+}
+
+function buildPublicStatusText(data) {
+  const ok = !!data?.doctor?.ok;
+  const events = Number(data?.store?.events || 0);
+  const security = Number(data?.store?.topics?.security || 0);
+  const agents = (data?.agents || []).length;
+  return [
+    'AIOS Status Snapshot',
+    `- Health: ${ok ? 'Healthy' : 'Warning'}`,
+    `- Active Agents tracked: ${agents}`,
+    `- Total events: ${events}`,
+    `- Security events: ${security}`,
+    `- Time: ${new Date().toLocaleString()}`,
+  ].join('\n');
+}
+
+async function copyPublicStatus() {
+  if (!lastSnapshot) {
+    document.getElementById('action-result').textContent = '⚠️ Chưa có dữ liệu, bấm Refresh trước.';
+    return;
+  }
+  const text = buildPublicStatusText(lastSnapshot);
+  try {
+    await navigator.clipboard.writeText(text);
+    document.getElementById('action-result').textContent = '✅ Đã copy status tóm tắt.';
+  } catch {
+    document.getElementById('action-result').textContent = '⚠️ Copy thất bại, trình duyệt chặn clipboard.';
+  }
+}
+
 async function runHealthCheck() {
   const res = await fetch('/api/run/doctor', { method: 'POST' });
   const data = await res.json();
@@ -347,6 +418,8 @@ async function runBenchmark() {
 async function refresh() {
   const res = await fetch('/api/status');
   const data = await res.json();
+  lastSnapshot = data;
+  renderNextSteps(data);
   const ok = data.doctor?.ok;
   updateLifeMeta(data.store?.events || 0);
   const el = document.getElementById('health');
