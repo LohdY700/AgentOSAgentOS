@@ -167,6 +167,16 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                     }
                 )
                 return
+            if parsed.path == "/app.js":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/javascript; charset=utf-8")
+                self.send_header("Cache-Control", "no-store, max-age=0")
+                self.send_header("Pragma", "no-cache")
+                body = DASHBOARD_JS.encode("utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if parsed.path in ("/", "/index.html"):
                 self._send_html(DASHBOARD_HTML)
                 return
@@ -276,7 +286,14 @@ DASHBOARD_HTML = """<!doctype html>
     <pre id='recent' style='display:none'></pre>
   </div>
 
-<script>
+<script src='/app.js'></script>
+
+</body>
+</html>
+"""
+
+
+DASHBOARD_JS = """
 function statusPill(s) {
   const c = (s === 'active') ? 'active' : (s === 'idle' ? 'idle' : 'down');
   return `<span class="pill ${c}">${s}</span>`;
@@ -340,9 +357,9 @@ function updateLifeMeta(eventCount) {
 
 function renderNextSteps(data) {
   const steps = [];
-  const ok = !!data?.doctor?.ok;
-  const guardAlerts = Number(data?.store?.topics?.security || 0);
-  const totalEvents = Number(data?.store?.events || 0);
+  const ok = !!(data && data.doctor && data.doctor.ok);
+  const guardAlerts = Number((data && data.store && data.store.topics && data.store.topics.security) || 0);
+  const totalEvents = Number((data && data.store && data.store.events) || 0);
 
   if (ok) {
     steps.push('✅ Hệ thống đang ổn định.');
@@ -372,10 +389,10 @@ function renderNextSteps(data) {
 }
 
 function buildPublicStatusText(data) {
-  const ok = !!data?.doctor?.ok;
-  const events = Number(data?.store?.events || 0);
-  const security = Number(data?.store?.topics?.security || 0);
-  const agents = (data?.agents || []).length;
+  const ok = !!(data && data.doctor && data.doctor.ok);
+  const events = Number((data && data.store && data.store.events) || 0);
+  const security = Number((data && data.store && data.store.topics && data.store.topics.security) || 0);
+  const agents = ((data && data.agents) || []).length;
   return [
     'AIOS Status Snapshot',
     `- Health: ${ok ? 'Healthy' : 'Warning'}`,
@@ -425,8 +442,8 @@ async function refresh() {
     const data = await res.json();
     lastSnapshot = data;
     renderNextSteps(data);
-    const ok = data.doctor?.ok;
-  updateLifeMeta(data.store?.events || 0);
+    const ok = !!(data && data.doctor && data.doctor.ok);
+  updateLifeMeta((data && data.store && data.store.events) || 0);
   const el = document.getElementById('health');
   el.className = ok ? 'ok' : 'bad';
   el.textContent = ok ? '✅ Healthy' : '⚠️ Warning';
@@ -461,13 +478,10 @@ async function refresh() {
   } catch (err) {
     document.getElementById('health').className = 'bad';
     document.getElementById('health').textContent = '⚠️ Dashboard load error';
-    document.getElementById('action-result').textContent = 'Lỗi tải dữ liệu: ' + (err?.message || err);
+    document.getElementById('action-result').textContent = 'Lỗi tải dữ liệu: ' + ((err && err.message) || err);
   }
 }
 drawLife();
 refresh();
 setInterval(refresh, 15000);
-</script>
-</body>
-</html>
 """
