@@ -27,6 +27,7 @@
 - Migrated embeddings import toward `langchain-huggingface` (with backward fallback).
 - Doctor now includes memory checks (backend status + read/write probe).
 - Added optional dependency group `.[memory]` in `pyproject.toml` for reproducible setup.
+- Added CI `memory-profile` job to validate `.[memory]` install + test + doctor checks.
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.
