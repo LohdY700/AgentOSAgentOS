@@ -31,6 +31,7 @@
 - Updated README with CI badge and `CI Profiles` section.
 - Added memory startup controls (`quiet_startup`, `preload_on_startup`) and exposed memory init timing/cache flags in dashboard status.
 - Added CLI command `memory-benchmark` and `make bench-memory` for memory search latency tracking.
+- Added README guidance for configuring `HF_TOKEN` to remove anonymous HF warnings and improve model warmup reliability.
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.

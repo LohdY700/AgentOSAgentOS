@@ -138,7 +138,19 @@ make doctor
 
 Gợi ý vận hành:
 - Nếu `backend=langchain` nhưng thiếu libs, hệ thống tự fallback về `local`.
-- Có thể set `HF_TOKEN` để tải model ổn định hơn khi warmup lần đầu.
+- Nên set `HF_TOKEN` để tránh warning anonymous request + tăng ổn định/rate-limit khi warmup lần đầu.
+
+Ví dụ nhanh:
+```bash
+export HF_TOKEN=hf_xxx_your_token
+make doctor
+make bench-memory
+```
+
+Nếu muốn lưu lâu dài, thêm vào shell profile (`~/.bashrc` / `~/.zshrc`):
+```bash
+export HF_TOKEN=hf_xxx_your_token
+```
 
 Output benchmark sẽ trả JSON với 5 metrics cốt lõi:
 - `event_throughput`
