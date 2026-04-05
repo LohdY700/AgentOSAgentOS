@@ -1,0 +1,11 @@
+{
+  "allowed": [
+    "systemd",
+    "bash",
+    "python3",
+    "ps",
+    "sh",
+    "sleep"
+  ],
+  "poll_sec": 2.0
+}

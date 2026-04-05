@@ -11,12 +11,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from aios_core.bus import EventBus  # noqa: E402
+from aios_core.config import load_guard_config  # noqa: E402
 from aios_core.events import Event  # noqa: E402
-from aios_core.guard import GuardConfig, ProcessGuard  # noqa: E402
+from aios_core.guard import ProcessGuard  # noqa: E402
 from aios_core.metrics import Metrics  # noqa: E402
 
 
-async def run_benchmark() -> dict[str, float | int]:
+async def run_benchmark(guard_config_path: Path) -> dict[str, float | int]:
     metrics = Metrics()
     bus = EventBus(metrics=metrics)
 
@@ -36,10 +37,7 @@ async def run_benchmark() -> dict[str, float | int]:
     for i in range(100):
         await bus.publish("system", Event.create("benchmark.tick", "bench", {"idx": i}))
 
-    guard = ProcessGuard(
-        GuardConfig(allowed={"systemd", "bash", "python3", "ps", "sh", "sleep"}),
-        bus,
-    )
+    guard = ProcessGuard(load_guard_config(guard_config_path), bus)
     await guard.watch_once()
 
     await asyncio.sleep(0.2)
@@ -53,5 +51,6 @@ async def run_benchmark() -> dict[str, float | int]:
 
 
 if __name__ == "__main__":
-    result = asyncio.run(run_benchmark())
+    cfg = ROOT / "config" / "guard-allowlist.json"
+    result = asyncio.run(run_benchmark(cfg))
     print(json.dumps(result, ensure_ascii=False))

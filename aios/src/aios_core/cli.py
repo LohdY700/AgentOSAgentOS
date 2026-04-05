@@ -5,16 +5,20 @@ import asyncio
 import json
 import logging
 import resource
+from pathlib import Path
 
 from .bus import EventBus
+from .config import load_guard_config
 from .events import Event
-from .guard import GuardConfig, ProcessGuard
+from .guard import ProcessGuard
 from .metrics import Metrics
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
+DEFAULT_GUARD_CONFIG = Path(__file__).resolve().parents[2] / "config" / "guard-allowlist.json"
 
-async def _cmd_demo() -> None:
+
+async def _cmd_demo(guard_config_path: Path) -> None:
     print("AIOS demo starting")
     metrics = Metrics()
     bus = EventBus(metrics=metrics)
@@ -35,10 +39,8 @@ async def _cmd_demo() -> None:
 
     await bus.publish("system", Event.create("system.boot", "aios", {"status": "ok"}))
 
-    guard = ProcessGuard(
-        GuardConfig(allowed={"systemd", "bash", "python3", "ps", "sh", "sleep"}),
-        bus,
-    )
+    guard_cfg = load_guard_config(guard_config_path)
+    guard = ProcessGuard(guard_cfg, bus)
     unknown = await guard.watch_once()
     print(json.dumps({"unknown_process_count": len(unknown)}))
 
@@ -48,7 +50,7 @@ async def _cmd_demo() -> None:
     await bus.stop()
 
 
-async def _cmd_benchmark() -> None:
+async def _cmd_benchmark(guard_config_path: Path) -> None:
     metrics = Metrics()
     bus = EventBus(metrics=metrics)
 
@@ -68,10 +70,8 @@ async def _cmd_benchmark() -> None:
     for i in range(100):
         await bus.publish("system", Event.create("benchmark.tick", "bench", {"idx": i}))
 
-    guard = ProcessGuard(
-        GuardConfig(allowed={"systemd", "bash", "python3", "ps", "sh", "sleep"}),
-        bus,
-    )
+    guard_cfg = load_guard_config(guard_config_path)
+    guard = ProcessGuard(guard_cfg, bus)
     await guard.watch_once()
 
     await asyncio.sleep(0.2)
@@ -82,16 +82,22 @@ async def _cmd_benchmark() -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="AIOS core tools")
+    parser.add_argument(
+        "--guard-config",
+        default=str(DEFAULT_GUARD_CONFIG),
+        help="path to guard allowlist json",
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("demo", help="run phase-1 demo flow")
     sub.add_parser("benchmark", help="run mini benchmark and output JSON metrics")
 
     args = parser.parse_args()
+    guard_cfg = Path(args.guard_config)
 
     if args.cmd == "demo":
-        asyncio.run(_cmd_demo())
+        asyncio.run(_cmd_demo(guard_cfg))
     elif args.cmd == "benchmark":
-        asyncio.run(_cmd_benchmark())
+        asyncio.run(_cmd_benchmark(guard_cfg))
 
 
 if __name__ == "__main__":
