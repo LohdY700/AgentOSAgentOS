@@ -162,18 +162,32 @@ DASHBOARD_HTML = """<!doctype html>
 
   <div class='card'>
     <h3>Store Summary</h3>
-    <pre id='store'></pre>
+    <div id='store-brief'>Loading...</div>
+    <button onclick='toggleStoreRaw()'>Xem chi tiết JSON</button>
+    <pre id='store' style='display:none'></pre>
   </div>
 
   <div class='card'>
     <h3>Recent Events (last 20)</h3>
-    <pre id='recent'></pre>
+    <div id='recent-brief'>Loading...</div>
+    <button onclick='toggleRecentRaw()'>Xem chi tiết JSON</button>
+    <pre id='recent' style='display:none'></pre>
   </div>
 
 <script>
 function statusPill(s) {
   const c = (s === 'active') ? 'active' : (s === 'idle' ? 'idle' : 'down');
   return `<span class="pill ${c}">${s}</span>`;
+}
+
+function toggleStoreRaw() {
+  const el = document.getElementById('store');
+  el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+}
+
+function toggleRecentRaw() {
+  const el = document.getElementById('recent');
+  el.style.display = (el.style.display === 'none') ? 'block' : 'none';
 }
 
 async function refresh() {
@@ -192,13 +206,20 @@ async function refresh() {
     tbody.appendChild(tr);
   }
 
-  document.getElementById('store').textContent = JSON.stringify({
+  const storeSummary = {
     path: data.store.path,
     events: data.store.events,
     topics: data.store.topics,
+  };
+  document.getElementById('store-brief').textContent =
+    `Events: ${data.store.events} | Topics: ${Object.keys(data.store.topics || {}).length}`;
+  document.getElementById('store').textContent = JSON.stringify({
+    ...storeSummary,
     checks: data.doctor.checks,
   }, null, 2);
 
+  const recentCount = (data.store.recent || []).length;
+  document.getElementById('recent-brief').textContent = `Hiển thị ${recentCount} events gần nhất`;
   document.getElementById('recent').textContent = JSON.stringify(data.store.recent, null, 2);
 }
 refresh();
