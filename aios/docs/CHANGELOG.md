@@ -35,6 +35,7 @@
 - Added `.env.example` with recommended HF/memory startup environment variables.
 - Added memory latency guard script (`scripts/check_memory_benchmark.py`) + `make bench-memory-check`.
 - CI memory-profile now enforces memory latency threshold via `make bench-memory-check`.
+- Added public/demo bundle for v0.1.5: `DEMO_SCRIPT_v0.1.5.md`, launch posts (VN/EN).
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.
