@@ -5,6 +5,7 @@ from pathlib import Path
 
 from .config import load_guard_config
 from .store_config import load_event_store_config
+from .memory_backend import load_memory_backend
 
 
 def run_doctor(root_dir: Path, guard_config_path: Path, store_config_path: Path) -> dict[str, object]:
@@ -40,6 +41,27 @@ def run_doctor(root_dir: Path, guard_config_path: Path, store_config_path: Path)
         checks.append({"name": "store_writable", "ok": True})
     except Exception as exc:  # noqa: BLE001
         checks.append({"name": "store_config", "ok": False, "error": str(exc)})
+
+    # memory backend
+    try:
+        mem = load_memory_backend(root_dir)
+        checks.append(
+            {
+                "name": "memory_backend",
+                "ok": True,
+                "requested": mem.requested,
+                "active": mem.active,
+                "fallback_used": mem.fallback_used,
+                "note": mem.note,
+            }
+        )
+
+        probe_text = "doctor-memory-probe"
+        mem.backend.add(probe_text, {"kind": "doctor_probe"})
+        probe_out = mem.backend.search("doctor-memory-probe", limit=1)
+        checks.append({"name": "memory_rw", "ok": len(probe_out) >= 1, "backend": mem.active})
+    except Exception as exc:  # noqa: BLE001
+        checks.append({"name": "memory_backend", "ok": False, "error": str(exc)})
 
     ok = all(bool(c.get("ok")) for c in checks)
     return {"ok": ok, "checks": checks}

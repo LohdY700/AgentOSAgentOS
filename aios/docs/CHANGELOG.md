@@ -23,6 +23,10 @@
 - Added configurable memory backend with `langchain` request + local fallback (`config/memory-backend.json`).
 - Added memory APIs (`/api/memory/add`, `/api/memory/search`) and dashboard memory backend status.
 - Added API endpoint `/api/approval/check?action=...` for policy decision queries.
+- Stabilized langchain backend loading and reduced repeated warmup via backend handle caching.
+- Migrated embeddings import toward `langchain-huggingface` (with backward fallback).
+- Doctor now includes memory checks (backend status + read/write probe).
+- Added optional dependency group `.[memory]` in `pyproject.toml` for reproducible setup.
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.

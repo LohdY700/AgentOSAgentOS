@@ -112,6 +112,19 @@ Có thêm feedback nhanh **👍/👎** để tính quality score hội thoại t
 Dashboard cũng hiển thị **Top 3 insights hôm nay** từ learning notes.
 Memory backend hỗ trợ cấu hình `langchain` (có fallback local), xem ở `config/memory-backend.json`.
 
+Production setup cho memory:
+```bash
+# cài optional deps cho semantic memory
+pip install -e ".[memory]"
+
+# kiểm tra nhanh guard/store + memory backend + memory read/write
+make doctor
+```
+
+Gợi ý vận hành:
+- Nếu `backend=langchain` nhưng thiếu libs, hệ thống tự fallback về `local`.
+- Có thể set `HF_TOKEN` để tải model ổn định hơn khi warmup lần đầu.
+
 Output benchmark sẽ trả JSON với 5 metrics cốt lõi:
 - `event_throughput`
 - `event_latency_p95`

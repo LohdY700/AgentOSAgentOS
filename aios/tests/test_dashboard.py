@@ -27,6 +27,8 @@ class DashboardTests(unittest.TestCase):
             self.assertEqual(snap["store"]["events"], 1)
             self.assertGreaterEqual(len(snap["agents"]), 1)
             self.assertIn("status", snap["agents"][0])
+            self.assertIn("memory_backend", snap)
+            self.assertIn(snap["memory_backend"]["active"], ("local", "langchain"))
 
 
 if __name__ == "__main__":
