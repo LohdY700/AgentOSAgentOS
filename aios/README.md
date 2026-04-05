@@ -93,6 +93,7 @@ Self-check nhanh cấu hình + quyền ghi:
 ```bash
 make doctor
 ```
+`doctor` trả exit code chuẩn: `0` (OK), `1` (có lỗi) để nhúng CI/healthcheck.
 
 Output benchmark sẽ trả JSON với 5 metrics cốt lõi:
 - `event_throughput`

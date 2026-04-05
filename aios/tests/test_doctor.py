@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from aios_core.doctor import run_doctor
+from aios_core.doctor import run_doctor, doctor_exit_code
 
 
 class DoctorTests(unittest.TestCase):
@@ -22,6 +22,17 @@ class DoctorTests(unittest.TestCase):
 
             out = run_doctor(root, guard, store)
             self.assertTrue(out["ok"])
+            self.assertEqual(doctor_exit_code(root, guard, store), 0)
+
+    def test_doctor_exit_code_nonzero_on_bad_config(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            guard = root / "guard.json"
+            store = root / "store.json"
+            guard.write_text("{bad-json", encoding="utf-8")
+            store.write_text(json.dumps({"path": "data/events.jsonl"}), encoding="utf-8")
+
+            self.assertEqual(doctor_exit_code(root, guard, store), 1)
 
 
 if __name__ == "__main__":

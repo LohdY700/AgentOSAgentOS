@@ -14,7 +14,7 @@ from .event_store import JsonlEventStore
 from .guard import ProcessGuard
 from .metrics import Metrics
 from .store_config import load_event_store_config
-from .doctor import render_doctor_json
+from .doctor import render_doctor_json, doctor_exit_code
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
@@ -135,6 +135,7 @@ def main() -> None:
         _cmd_replay_store(store_cfg)
     elif args.cmd == "doctor":
         print(render_doctor_json(ROOT_DIR, guard_cfg, store_cfg))
+        raise SystemExit(doctor_exit_code(ROOT_DIR, guard_cfg, store_cfg))
 
 
 if __name__ == "__main__":

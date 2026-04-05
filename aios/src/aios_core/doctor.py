@@ -47,3 +47,8 @@ def run_doctor(root_dir: Path, guard_config_path: Path, store_config_path: Path)
 
 def render_doctor_json(root_dir: Path, guard_config_path: Path, store_config_path: Path) -> str:
     return json.dumps(run_doctor(root_dir, guard_config_path, store_config_path), ensure_ascii=False)
+
+
+def doctor_exit_code(root_dir: Path, guard_config_path: Path, store_config_path: Path) -> int:
+    result = run_doctor(root_dir, guard_config_path, store_config_path)
+    return 0 if bool(result.get("ok")) else 1
