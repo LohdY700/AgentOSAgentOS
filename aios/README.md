@@ -51,6 +51,7 @@ make replay-store
 make store-prune
 make demo-lowram
 make bench-throughput
+make doctor
 ```
 
 (hoặc chạy tay)
@@ -87,6 +88,10 @@ make replay-store
 Và prune giữ lại 1000 event gần nhất:
 ```bash
 make store-prune
+```
+Self-check nhanh cấu hình + quyền ghi:
+```bash
+make doctor
 ```
 
 Output benchmark sẽ trả JSON với 5 metrics cốt lõi:

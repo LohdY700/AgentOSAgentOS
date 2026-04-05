@@ -34,3 +34,6 @@ demo-throughput:
 
 bench-throughput:
 	$(PYTHONPATH_SRC) python3 -m aios_core.cli --store-config config/event-store.high-throughput.json benchmark
+
+doctor:
+	$(PYTHONPATH_SRC) python3 -m aios_core.cli doctor

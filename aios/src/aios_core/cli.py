@@ -14,6 +14,7 @@ from .event_store import JsonlEventStore
 from .guard import ProcessGuard
 from .metrics import Metrics
 from .store_config import load_event_store_config
+from .doctor import render_doctor_json
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
@@ -120,6 +121,7 @@ def main() -> None:
     sub.add_parser("demo", help="run phase-1 demo flow")
     sub.add_parser("benchmark", help="run mini benchmark and output JSON metrics")
     sub.add_parser("replay-store", help="summarize persisted events from local JSONL store")
+    sub.add_parser("doctor", help="run self-check on guard/store configs and write access")
 
     args = parser.parse_args()
     guard_cfg = Path(args.guard_config)
@@ -131,6 +133,8 @@ def main() -> None:
         asyncio.run(_cmd_benchmark(guard_cfg, store_cfg))
     elif args.cmd == "replay-store":
         _cmd_replay_store(store_cfg)
+    elif args.cmd == "doctor":
+        print(render_doctor_json(ROOT_DIR, guard_cfg, store_cfg))
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@
 - CLI now supports `--store-config` for per-device thresholds.
 - Added presets: `event-store.low-ram.json` and `event-store.high-throughput.json`.
 - Added Make targets for preset runs (`demo-lowram`, `bench-throughput`, etc.).
+- Added `doctor` self-check command for guard/store config + writable probe.
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.
