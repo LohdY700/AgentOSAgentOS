@@ -1,4 +1,4 @@
-.PHONY: demo bench report test learning replay-store store-prune demo-lowram bench-lowram demo-throughput bench-throughput
+.PHONY: demo bench report test learning replay-store store-prune demo-lowram bench-lowram demo-throughput bench-throughput doctor ci-smoke
 
 PYTHONPATH_SRC=PYTHONPATH=src
 
@@ -37,3 +37,8 @@ bench-throughput:
 
 doctor:
 	$(PYTHONPATH_SRC) python3 -m aios_core.cli doctor
+
+ci-smoke:
+	$(MAKE) test
+	$(MAKE) doctor
+	$(MAKE) bench

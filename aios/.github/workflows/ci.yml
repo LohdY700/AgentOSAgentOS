@@ -23,11 +23,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Run unit tests
-        run: make test
-
-      - name: Run benchmark smoke
-        run: make bench
+      - name: Run local CI smoke target
+        run: make ci-smoke
 
       - name: Generate benchmark report
         run: make report

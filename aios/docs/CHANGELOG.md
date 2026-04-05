@@ -9,6 +9,7 @@
 - Added presets: `event-store.low-ram.json` and `event-store.high-throughput.json`.
 - Added Make targets for preset runs (`demo-lowram`, `bench-throughput`, etc.).
 - Added `doctor` self-check command for guard/store config + writable probe.
+- Added `make ci-smoke` target (test + doctor + benchmark) and wired CI workflow to use it.
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.

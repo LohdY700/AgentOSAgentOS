@@ -52,6 +52,7 @@ make store-prune
 make demo-lowram
 make bench-throughput
 make doctor
+make ci-smoke
 ```
 
 (hoặc chạy tay)
