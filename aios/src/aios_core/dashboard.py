@@ -420,11 +420,12 @@ async function runBenchmark() {
 }
 
 async function refresh() {
-  const res = await fetch('/api/status');
-  const data = await res.json();
-  lastSnapshot = data;
-  renderNextSteps(data);
-  const ok = data.doctor?.ok;
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+    lastSnapshot = data;
+    renderNextSteps(data);
+    const ok = data.doctor?.ok;
   updateLifeMeta(data.store?.events || 0);
   const el = document.getElementById('health');
   el.className = ok ? 'ok' : 'bad';
@@ -454,9 +455,14 @@ async function refresh() {
     checks: data.doctor.checks,
   }, null, 2);
 
-  const recentCount = (data.store.recent || []).length;
-  document.getElementById('recent-brief').textContent = `Hiển thị ${recentCount} events gần nhất`;
-  document.getElementById('recent').textContent = JSON.stringify(data.store.recent, null, 2);
+    const recentCount = (data.store.recent || []).length;
+    document.getElementById('recent-brief').textContent = `Hiển thị ${recentCount} events gần nhất`;
+    document.getElementById('recent').textContent = JSON.stringify(data.store.recent, null, 2);
+  } catch (err) {
+    document.getElementById('health').className = 'bad';
+    document.getElementById('health').textContent = '⚠️ Dashboard load error';
+    document.getElementById('action-result').textContent = 'Lỗi tải dữ liệu: ' + (err?.message || err);
+  }
 }
 drawLife();
 refresh();
