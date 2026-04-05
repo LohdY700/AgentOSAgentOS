@@ -25,6 +25,8 @@ class DashboardTests(unittest.TestCase):
             snap = build_snapshot(root, guard, store_cfg)
             self.assertTrue(snap["doctor"]["ok"])
             self.assertEqual(snap["store"]["events"], 1)
+            self.assertGreaterEqual(len(snap["agents"]), 1)
+            self.assertIn("status", snap["agents"][0])
 
 
 if __name__ == "__main__":

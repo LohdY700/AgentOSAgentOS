@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,20 @@ from typing import Any
 from .doctor import run_doctor
 from .event_store import JsonlEventStore
 from .store_config import load_event_store_config
+
+
+def _parse_iso(ts: str) -> datetime:
+    # supports standard isoformat and trailing Z
+    return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+
+def _agent_status(last_seen: datetime, now: datetime) -> str:
+    age_sec = (now - last_seen).total_seconds()
+    if age_sec <= 30:
+        return "active"
+    if age_sec <= 300:
+        return "idle"
+    return "down"
 
 
 def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: Path) -> dict[str, Any]:
@@ -20,17 +35,45 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
 
     topics: dict[str, int] = {}
     recent: list[dict[str, Any]] = []
+    agent_index: dict[str, dict[str, Any]] = {}
+    now = datetime.now(timezone.utc)
+
     for topic, event in rows:
         topics[topic] = topics.get(topic, 0) + 1
-        recent.append({
-            "topic": topic,
-            "type": event.type,
-            "source": event.source,
-            "timestamp": event.timestamp,
-            "payload": event.payload,
-        })
+        recent.append(
+            {
+                "topic": topic,
+                "type": event.type,
+                "source": event.source,
+                "timestamp": event.timestamp,
+                "payload": event.payload,
+            }
+        )
+
+        src = event.source or "unknown"
+        item = agent_index.setdefault(
+            src,
+            {
+                "name": src,
+                "events": 0,
+                "last_type": None,
+                "last_seen": None,
+                "status": "down",
+            },
+        )
+        item["events"] += 1
+        item["last_type"] = event.type
+        item["last_seen"] = event.timestamp
+
+    # derive status
+    for item in agent_index.values():
+        last_seen_raw = item.get("last_seen")
+        if last_seen_raw:
+            last_seen = _parse_iso(str(last_seen_raw))
+            item["status"] = _agent_status(last_seen, now)
 
     recent = recent[-20:]
+    agents = sorted(agent_index.values(), key=lambda x: (x["status"], -int(x["events"])))
 
     return {
         "doctor": doctor,
@@ -40,6 +83,7 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
             "topics": topics,
             "recent": recent,
         },
+        "agents": agents,
     }
 
 
@@ -89,18 +133,32 @@ DASHBOARD_HTML = """<!doctype html>
   <meta name='viewport' content='width=device-width, initial-scale=1' />
   <title>AIOS Dashboard</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 24px; max-width: 900px; }
+    body { font-family: system-ui, sans-serif; margin: 24px; max-width: 980px; }
     .ok { color: #0a7d2c; font-weight: 700; }
     .bad { color: #b42318; font-weight: 700; }
     .card { border: 1px solid #ddd; border-radius: 12px; padding: 12px; margin: 10px 0; }
     pre { background: #f7f7f8; padding: 10px; border-radius: 8px; overflow:auto; }
     button { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid #eee; font-size: 14px; }
+    .pill { border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 700; display: inline-block; }
+    .active { background:#e8f7ee; color:#0a7d2c; }
+    .idle { background:#fff5e6; color:#9a6700; }
+    .down { background:#fdecec; color:#b42318; }
   </style>
 </head>
 <body>
   <h1>AIOS Dashboard</h1>
   <p id='health'>Loading...</p>
   <button onclick='refresh()'>Refresh</button>
+
+  <div class='card'>
+    <h3>Active Agents</h3>
+    <table>
+      <thead><tr><th>Agent</th><th>Status</th><th>Events</th><th>Last Event Type</th><th>Last Seen</th></tr></thead>
+      <tbody id='agents'></tbody>
+    </table>
+  </div>
 
   <div class='card'>
     <h3>Store Summary</h3>
@@ -113,6 +171,11 @@ DASHBOARD_HTML = """<!doctype html>
   </div>
 
 <script>
+function statusPill(s) {
+  const c = (s === 'active') ? 'active' : (s === 'idle' ? 'idle' : 'down');
+  return `<span class="pill ${c}">${s}</span>`;
+}
+
 async function refresh() {
   const res = await fetch('/api/status');
   const data = await res.json();
@@ -120,6 +183,14 @@ async function refresh() {
   const el = document.getElementById('health');
   el.className = ok ? 'ok' : 'bad';
   el.textContent = ok ? '✅ Healthy' : '⚠️ Warning';
+
+  const tbody = document.getElementById('agents');
+  tbody.innerHTML = '';
+  for (const a of (data.agents || [])) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${a.name}</td><td>${statusPill(a.status)}</td><td>${a.events}</td><td>${a.last_type || ''}</td><td>${a.last_seen || ''}</td>`;
+    tbody.appendChild(tr);
+  }
 
   document.getElementById('store').textContent = JSON.stringify({
     path: data.store.path,
