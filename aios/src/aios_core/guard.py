@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import subprocess
 from dataclasses import dataclass
+from pathlib import Path
 
 from .events import Event
 from .bus import EventBus
@@ -12,6 +13,8 @@ from .bus import EventBus
 class GuardConfig:
     allowed: set[str]
     poll_sec: float = 2.0
+    mode: str = "strict"  # strict|learning
+    learning_output: Path | None = None
 
 
 class ProcessGuard:
@@ -26,6 +29,22 @@ class ProcessGuard:
     async def watch_once(self) -> list[str]:
         current = self._list_process_names()
         unknown = sorted(p for p in current if p not in self.config.allowed)
+
+        if self.config.mode == "learning":
+            if self.config.learning_output:
+                self.config.learning_output.parent.mkdir(parents=True, exist_ok=True)
+                self.config.learning_output.write_text("\n".join(unknown) + "\n", encoding="utf-8")
+            await self.bus.publish(
+                "security",
+                Event.create(
+                    event_type="security.process.learning",
+                    source="aios-guard",
+                    payload={"unknown_count": len(unknown)},
+                ),
+            )
+            return unknown
+
+        # strict mode: emit anomaly per process
         for proc in unknown:
             await self.bus.publish(
                 "security",

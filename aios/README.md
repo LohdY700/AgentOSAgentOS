@@ -32,7 +32,12 @@ cd aios
 PYTHONPATH=src python3 -m aios_core.cli demo
 PYTHONPATH=src python3 -m aios_core.cli benchmark
 python3 scripts/benchmark.py
+python3 scripts/benchmark_report.py
 ```
+
+Guard mode config ở `config/guard-allowlist.json`:
+- `strict`: emit anomaly event theo từng process lạ
+- `learning`: ghi danh sách process lạ ra `learning_output` để tinh chỉnh allowlist
 
 Output benchmark sẽ trả JSON với 5 metrics cốt lõi:
 - `event_throughput`

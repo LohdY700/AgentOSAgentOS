@@ -1,4 +1,5 @@
 {
+  "mode": "strict",
   "allowed": [
     "systemd",
     "bash",
@@ -7,5 +8,6 @@
     "sh",
     "sleep"
   ],
-  "poll_sec": 2.0
+  "poll_sec": 2.0,
+  "learning_output": "aios/config/guard-learning-candidates.txt"
 }

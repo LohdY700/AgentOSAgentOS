@@ -42,7 +42,7 @@ async def _cmd_demo(guard_config_path: Path) -> None:
     guard_cfg = load_guard_config(guard_config_path)
     guard = ProcessGuard(guard_cfg, bus)
     unknown = await guard.watch_once()
-    print(json.dumps({"unknown_process_count": len(unknown)}))
+    print(json.dumps({"guard_mode": guard_cfg.mode, "unknown_process_count": len(unknown)}))
 
     await asyncio.sleep(0.3)
     metrics.memory_idle_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024

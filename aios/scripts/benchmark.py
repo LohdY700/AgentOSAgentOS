@@ -17,7 +17,7 @@ from aios_core.guard import ProcessGuard  # noqa: E402
 from aios_core.metrics import Metrics  # noqa: E402
 
 
-async def run_benchmark(guard_config_path: Path) -> dict[str, float | int]:
+async def run_benchmark(guard_config_path: Path) -> dict[str, float | int | str]:
     metrics = Metrics()
     bus = EventBus(metrics=metrics)
 
@@ -37,7 +37,8 @@ async def run_benchmark(guard_config_path: Path) -> dict[str, float | int]:
     for i in range(100):
         await bus.publish("system", Event.create("benchmark.tick", "bench", {"idx": i}))
 
-    guard = ProcessGuard(load_guard_config(guard_config_path), bus)
+    guard_cfg = load_guard_config(guard_config_path)
+    guard = ProcessGuard(guard_cfg, bus)
     await guard.watch_once()
 
     await asyncio.sleep(0.2)
@@ -46,6 +47,7 @@ async def run_benchmark(guard_config_path: Path) -> dict[str, float | int]:
     metrics.memory_idle_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
 
     out = metrics.snapshot()
+    out["guard_mode"] = guard_cfg.mode
     await bus.stop()
     return out
 
