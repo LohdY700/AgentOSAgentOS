@@ -28,6 +28,8 @@ Mục tiêu: biến bản demo 65MB/5s boot thành hệ thống có thể demo c
 - `docs/RELEASE_COMMANDS.md` — lệnh phát hành/tag
 - `docs/LAUNCH_POST_VN.md` — mẫu bài đăng tiếng Việt
 - `docs/LAUNCH_POST_EN.md` — mẫu bài đăng tiếng Anh
+- `docs/LAUNCH_POST_SHORT_VN.md` / `docs/LAUNCH_POST_SHORT_EN.md` — bản ngắn
+- `docs/LAUNCH_POST_LONG_VN.md` / `docs/LAUNCH_POST_LONG_EN.md` — bản dài
 - `README.en.md` — bản tiếng Anh ngắn
 
 ## Nguyên tắc
