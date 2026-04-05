@@ -27,6 +27,7 @@ Mục tiêu: biến bản demo 65MB/5s boot thành hệ thống có thể demo c
 - `docs/RELEASE_NOTES_v0.1.0.md` — release notes draft
 - `docs/RELEASE_NOTES_v0.1.1.md` — patch notes (noise reduction)
 - `docs/CHANGELOG.md` — lịch sử thay đổi
+- `docs/PUBLISH_CHECK.md` — checklist 60 giây trước khi publish
 - `docs/RELEASE_COMMANDS.md` — lệnh phát hành/tag
 - `docs/LAUNCH_POST_VN.md` — mẫu bài đăng tiếng Việt
 - `docs/LAUNCH_POST_EN.md` — mẫu bài đăng tiếng Anh
