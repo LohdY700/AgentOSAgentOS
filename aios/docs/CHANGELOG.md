@@ -19,6 +19,7 @@
 - Added Learning Inbox flow (`Add Link` + `Learn Now`) with persisted learning notes.
 - Added `Top 3 insights hôm nay` section in dashboard from learning notes.
 - Added `Chat Training Examples` capture flow (user/assistant examples) in dashboard + API.
+- Added conversation feedback loop (`👍/👎`) with quality score summary.
 - Added API endpoint `/api/approval/check?action=...` for policy decision queries.
 
 ## v0.1.1

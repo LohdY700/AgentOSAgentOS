@@ -108,6 +108,7 @@ Trang này hiển thị trạng thái Healthy/Warning, bảng Active Agents (act
 Có nút thao tác trực tiếp: **Run Health Check** và **Run Benchmark**.
 Có thêm **Learning Inbox**: dán link, bấm **Add Link** rồi **Learn Now** để tạo ghi chú học tập.
 Có thêm **Chat Training Examples** để nạp ví dụ hội thoại (user/assistant).
+Có thêm feedback nhanh **👍/👎** để tính quality score hội thoại theo thời gian.
 Dashboard cũng hiển thị **Top 3 insights hôm nay** từ learning notes.
 
 Output benchmark sẽ trả JSON với 5 metrics cốt lõi:

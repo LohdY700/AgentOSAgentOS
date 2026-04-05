@@ -16,6 +16,7 @@ from .approval import load_policy, classify_action
 from .learning import LearningInbox
 from .learning_process import process_learning_inbox
 from .conversation_data import ChatExampleStore
+from .conversation_quality import FeedbackStore, quality_summary
 
 
 def _parse_iso(ts: str) -> datetime:
@@ -116,6 +117,10 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
     chat_store = ChatExampleStore(root_dir / "data" / "chat-examples.jsonl")
     chat_recent = chat_store.list_recent(limit=10)
 
+    feedback_store = FeedbackStore(root_dir / "data" / "conversation-feedback.jsonl")
+    feedback_recent = feedback_store.list_recent(limit=100)
+    feedback_stat = quality_summary(feedback_recent)
+
     return {
         "doctor": doctor,
         "approval": {
@@ -141,6 +146,7 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
         "conversation": {
             "examples_count": len(chat_recent),
             "recent": chat_recent,
+            "feedback": feedback_stat,
         },
     }
 
@@ -221,6 +227,11 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                 store = ChatExampleStore(root_dir / "data" / "chat-examples.jsonl")
                 self._send_json({"ok": True, "items": store.list_recent(limit=limit)})
                 return
+            if parsed.path == "/api/conversation/quality":
+                store = FeedbackStore(root_dir / "data" / "conversation-feedback.jsonl")
+                rows = store.list_recent(limit=200)
+                self._send_json({"ok": True, "summary": quality_summary(rows), "recent": rows[-20:]})
+                return
             if parsed.path == "/app.js":
                 self.send_response(200)
                 self.send_header("Content-Type", "application/javascript; charset=utf-8")
@@ -288,6 +299,19 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                 except Exception as exc:  # noqa: BLE001
                     self._send_json({"ok": False, "error": str(exc)}, code=500)
                 return
+            if parsed.path == "/api/conversation/feedback":
+                try:
+                    length = int(self.headers.get("Content-Length", "0"))
+                    raw = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
+                    body = json.loads(raw)
+                    label = str(body.get("label", "")).strip().lower()
+                    note = str(body.get("note", "")).strip()
+                    store = FeedbackStore(root_dir / "data" / "conversation-feedback.jsonl")
+                    fb = store.add(label, note)
+                    self._send_json({"ok": True, "item": {"label": fb.label, "note": fb.note, "created_at": fb.created_at}})
+                except Exception as exc:  # noqa: BLE001
+                    self._send_json({"ok": False, "error": str(exc)}, code=500)
+                return
             self._send_json({"error": "not found"}, code=404)
 
         def log_message(self, fmt: str, *args):
@@ -352,8 +376,14 @@ DASHBOARD_HTML = """<!doctype html>
       <input id='chat-text' placeholder='Ví dụ câu hội thoại...' style='flex:1;min-width:320px;padding:8px;border:1px solid #ddd;border-radius:8px;' />
       <button onclick='addChatExample()'>Add Chat Example</button>
     </div>
+    <div style='display:flex;gap:8px;margin-top:8px;'>
+      <button onclick="sendConversationFeedback('good')">👍 Good</button>
+      <button onclick="sendConversationFeedback('bad')">👎 Bad</button>
+      <input id='feedback-note' placeholder='ghi chú ngắn (tuỳ chọn)' style='flex:1;min-width:220px;padding:8px;border:1px solid #ddd;border-radius:8px;' />
+    </div>
     <div id='chat-result' style='margin-top:8px;color:#444;'></div>
     <div id='chat-brief' style='margin-top:8px;color:#444;'>Đang tải...</div>
+    <div id='chat-quality' style='margin-top:6px;color:#444;'>Quality: đang tải...</div>
   </div>
 
   <div class='card'>
@@ -565,6 +595,24 @@ async function addChatExample() {
   await refresh();
 }
 
+async function sendConversationFeedback(label) {
+  const noteEl = document.getElementById('feedback-note');
+  const note = (noteEl.value || '').trim();
+  const res = await fetch('/api/conversation/feedback', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ label: label, note: note })
+  });
+  const data = await res.json();
+  if (!data.ok) {
+    document.getElementById('chat-result').textContent = '⚠️ Feedback lỗi: ' + (data.error || 'unknown');
+    return;
+  }
+  document.getElementById('chat-result').textContent = '✅ Đã ghi feedback ' + label + '.';
+  noteEl.value = '';
+  await refresh();
+}
+
 async function addLearningLink() {
   const urlEl = document.getElementById('learn-url');
   const noteEl = document.getElementById('learn-note');
@@ -648,6 +696,8 @@ async function refresh() {
   const cr = convo.recent || [];
   const lastChat = cr.length ? (cr[cr.length - 1].role + ': ' + cr[cr.length - 1].text.slice(0, 60)) : 'chưa có ví dụ';
   document.getElementById('chat-brief').textContent = 'Examples: ' + (convo.examples_count || 0) + ' | Mới nhất: ' + lastChat;
+  const fb = convo.feedback || {};
+  document.getElementById('chat-quality').textContent = 'Quality score: ' + (fb.score || 0) + '% | Good: ' + (fb.good || 0) + ' | Bad: ' + (fb.bad || 0) + ' | Total: ' + (fb.total || 0);
 
   const learn = data.learning || {};
   const lr = learn.recent || [];
