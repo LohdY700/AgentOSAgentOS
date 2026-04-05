@@ -400,7 +400,7 @@ function buildPublicStatusText(data) {
     '- Total events: ' + events,
     '- Security events: ' + security,
     '- Time: ' + new Date().toLocaleString(),
-  ].join('\n');
+  ].join('\\n');
 }
 
 async function copyPublicStatus() {
