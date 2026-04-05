@@ -17,6 +17,7 @@ from .learning import LearningInbox
 from .learning_process import process_learning_inbox
 from .conversation_data import ChatExampleStore
 from .conversation_quality import FeedbackStore, quality_summary
+from .memory_backend import load_memory_backend
 
 
 def _parse_iso(ts: str) -> datetime:
@@ -121,6 +122,8 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
     feedback_recent = feedback_store.list_recent(limit=100)
     feedback_stat = quality_summary(feedback_recent)
 
+    mem = load_memory_backend(root_dir)
+
     return {
         "doctor": doctor,
         "approval": {
@@ -147,6 +150,12 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
             "examples_count": len(chat_recent),
             "recent": chat_recent,
             "feedback": feedback_stat,
+        },
+        "memory_backend": {
+            "requested": mem.requested,
+            "active": mem.active,
+            "fallback_used": mem.fallback_used,
+            "note": mem.note,
         },
     }
 
@@ -232,6 +241,16 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                 rows = store.list_recent(limit=200)
                 self._send_json({"ok": True, "summary": quality_summary(rows), "recent": rows[-20:]})
                 return
+            if parsed.path == "/api/memory/search":
+                q = parse_qs(parsed.query)
+                query = str((q.get("q", [""])[0] or "")).strip()
+                limit = int((q.get("limit", ["5"])[0] or "5"))
+                if not query:
+                    self._send_json({"ok": False, "error": "missing q"}, code=400)
+                    return
+                mem = load_memory_backend(root_dir)
+                self._send_json({"ok": True, "backend": mem.active, "items": mem.backend.search(query, limit=limit)})
+                return
             if parsed.path == "/app.js":
                 self.send_response(200)
                 self.send_header("Content-Type", "application/javascript; charset=utf-8")
@@ -295,7 +314,9 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                         return
                     store = ChatExampleStore(root_dir / "data" / "chat-examples.jsonl")
                     ex = store.add(role, text)
-                    self._send_json({"ok": True, "item": {"role": ex.role, "text": ex.text, "created_at": ex.created_at}})
+                    mem = load_memory_backend(root_dir)
+                    mem.backend.add(text=ex.text, metadata={"kind": "chat_example", "role": ex.role})
+                    self._send_json({"ok": True, "item": {"role": ex.role, "text": ex.text, "created_at": ex.created_at}, "memory_backend": mem.active})
                 except Exception as exc:  # noqa: BLE001
                     self._send_json({"ok": False, "error": str(exc)}, code=500)
                 return
@@ -309,6 +330,22 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                     store = FeedbackStore(root_dir / "data" / "conversation-feedback.jsonl")
                     fb = store.add(label, note)
                     self._send_json({"ok": True, "item": {"label": fb.label, "note": fb.note, "created_at": fb.created_at}})
+                except Exception as exc:  # noqa: BLE001
+                    self._send_json({"ok": False, "error": str(exc)}, code=500)
+                return
+            if parsed.path == "/api/memory/add":
+                try:
+                    length = int(self.headers.get("Content-Length", "0"))
+                    raw = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
+                    body = json.loads(raw)
+                    text = str(body.get("text", "")).strip()
+                    metadata = body.get("metadata", {}) or {}
+                    if not text:
+                        self._send_json({"ok": False, "error": "text is required"}, code=400)
+                        return
+                    mem = load_memory_backend(root_dir)
+                    mem.backend.add(text=text, metadata=metadata)
+                    self._send_json({"ok": True, "backend": mem.active})
                 except Exception as exc:  # noqa: BLE001
                     self._send_json({"ok": False, "error": str(exc)}, code=500)
                 return
@@ -425,6 +462,11 @@ DASHBOARD_HTML = """<!doctype html>
   <div class='card'>
     <h3>Approval Policy</h3>
     <div id='approval-brief'>Loading...</div>
+  </div>
+
+  <div class='card'>
+    <h3>Memory Backend</h3>
+    <div id='memory-brief'>Loading...</div>
   </div>
 
   <div class='card'>
@@ -691,6 +733,10 @@ async function refresh() {
   const ap = data.approval || {};
   document.getElementById('approval-brief').textContent =
     'Tier1 auto: ' + (ap.tier1_count || 0) + ' | Tier2 owner: ' + (ap.tier2_count || 0) + ' | Pre-approval: ' + (ap.preapproval_enabled ? 'ON' : 'OFF') + ' (' + (ap.preapproval_max_minutes || 0) + 'm)';
+
+  const mb = data.memory_backend || {};
+  document.getElementById('memory-brief').textContent =
+    'Requested: ' + (mb.requested || 'local') + ' | Active: ' + (mb.active || 'local') + (mb.fallback_used ? ' (fallback)' : '') + (mb.note ? ' | Note: ' + mb.note : '');
 
   const convo = data.conversation || {};
   const cr = convo.recent || [];

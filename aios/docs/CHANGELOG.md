@@ -20,6 +20,8 @@
 - Added `Top 3 insights hôm nay` section in dashboard from learning notes.
 - Added `Chat Training Examples` capture flow (user/assistant examples) in dashboard + API.
 - Added conversation feedback loop (`👍/👎`) with quality score summary.
+- Added configurable memory backend with `langchain` request + local fallback (`config/memory-backend.json`).
+- Added memory APIs (`/api/memory/add`, `/api/memory/search`) and dashboard memory backend status.
 - Added API endpoint `/api/approval/check?action=...` for policy decision queries.
 
 ## v0.1.1

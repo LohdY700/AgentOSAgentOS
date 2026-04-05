@@ -1,0 +1,9 @@
+{
+  "backend": "langchain",
+  "fallback": "local",
+  "local_path": "data/memory-local.jsonl",
+  "langchain": {
+    "store_dir": "data/langchain-memory",
+    "collection": "aios_memory"
+  }
+}

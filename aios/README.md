@@ -110,6 +110,7 @@ Có thêm **Learning Inbox**: dán link, bấm **Add Link** rồi **Learn Now** 
 Có thêm **Chat Training Examples** để nạp ví dụ hội thoại (user/assistant).
 Có thêm feedback nhanh **👍/👎** để tính quality score hội thoại theo thời gian.
 Dashboard cũng hiển thị **Top 3 insights hôm nay** từ learning notes.
+Memory backend hỗ trợ cấu hình `langchain` (có fallback local), xem ở `config/memory-backend.json`.
 
 Output benchmark sẽ trả JSON với 5 metrics cốt lõi:
 - `event_throughput`
