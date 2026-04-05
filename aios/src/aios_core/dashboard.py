@@ -15,6 +15,7 @@ from .store_config import load_event_store_config
 from .approval import load_policy, classify_action
 from .learning import LearningInbox
 from .learning_process import process_learning_inbox
+from .conversation_data import ChatExampleStore
 
 
 def _parse_iso(ts: str) -> datetime:
@@ -112,6 +113,9 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
         if len(insights) >= 3:
             break
 
+    chat_store = ChatExampleStore(root_dir / "data" / "chat-examples.jsonl")
+    chat_recent = chat_store.list_recent(limit=10)
+
     return {
         "doctor": doctor,
         "approval": {
@@ -133,6 +137,10 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
             "notes_count": len(notes_recent),
             "notes_recent": notes_recent,
             "insights": insights,
+        },
+        "conversation": {
+            "examples_count": len(chat_recent),
+            "recent": chat_recent,
         },
     }
 
@@ -207,6 +215,12 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                 inbox = LearningInbox(root_dir / "data" / "learning-inbox.jsonl")
                 self._send_json({"ok": True, "items": inbox.list_recent(limit=limit)})
                 return
+            if parsed.path == "/api/chat-examples/list":
+                q = parse_qs(parsed.query)
+                limit = int((q.get("limit", ["20"])[0] or "20"))
+                store = ChatExampleStore(root_dir / "data" / "chat-examples.jsonl")
+                self._send_json({"ok": True, "items": store.list_recent(limit=limit)})
+                return
             if parsed.path == "/app.js":
                 self.send_response(200)
                 self.send_header("Content-Type", "application/javascript; charset=utf-8")
@@ -252,6 +266,25 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
             if parsed.path == "/api/learn/process":
                 try:
                     self._send_json(process_learning_inbox(root_dir, limit=5))
+                except Exception as exc:  # noqa: BLE001
+                    self._send_json({"ok": False, "error": str(exc)}, code=500)
+                return
+            if parsed.path == "/api/chat-examples/add":
+                try:
+                    length = int(self.headers.get("Content-Length", "0"))
+                    raw = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
+                    body = json.loads(raw)
+                    role = str(body.get("role", "assistant")).strip()
+                    text = str(body.get("text", "")).strip()
+                    if role not in ("user", "assistant"):
+                        self._send_json({"ok": False, "error": "role must be user|assistant"}, code=400)
+                        return
+                    if not text:
+                        self._send_json({"ok": False, "error": "text is required"}, code=400)
+                        return
+                    store = ChatExampleStore(root_dir / "data" / "chat-examples.jsonl")
+                    ex = store.add(role, text)
+                    self._send_json({"ok": True, "item": {"role": ex.role, "text": ex.text, "created_at": ex.created_at}})
                 except Exception as exc:  # noqa: BLE001
                     self._send_json({"ok": False, "error": str(exc)}, code=500)
                 return
@@ -307,6 +340,20 @@ DASHBOARD_HTML = """<!doctype html>
     <ul id='next-steps'>
       <li>Đang tải gợi ý...</li>
     </ul>
+  </div>
+
+  <div class='card'>
+    <h3>Chat Training Examples</h3>
+    <div style='display:flex;gap:8px;flex-wrap:wrap'>
+      <select id='chat-role' style='padding:8px;border:1px solid #ddd;border-radius:8px;'>
+        <option value='user'>user</option>
+        <option value='assistant' selected>assistant</option>
+      </select>
+      <input id='chat-text' placeholder='Ví dụ câu hội thoại...' style='flex:1;min-width:320px;padding:8px;border:1px solid #ddd;border-radius:8px;' />
+      <button onclick='addChatExample()'>Add Chat Example</button>
+    </div>
+    <div id='chat-result' style='margin-top:8px;color:#444;'></div>
+    <div id='chat-brief' style='margin-top:8px;color:#444;'>Đang tải...</div>
   </div>
 
   <div class='card'>
@@ -495,6 +542,29 @@ async function copyPublicStatus() {
   }
 }
 
+async function addChatExample() {
+  const role = document.getElementById('chat-role').value;
+  const textEl = document.getElementById('chat-text');
+  const text = (textEl.value || '').trim();
+  if (!text) {
+    document.getElementById('chat-result').textContent = '⚠️ Vui lòng nhập nội dung hội thoại.';
+    return;
+  }
+  const res = await fetch('/api/chat-examples/add', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role: role, text: text })
+  });
+  const data = await res.json();
+  if (!data.ok) {
+    document.getElementById('chat-result').textContent = '⚠️ Add thất bại: ' + (data.error || 'unknown');
+    return;
+  }
+  document.getElementById('chat-result').textContent = '✅ Đã thêm chat example.';
+  textEl.value = '';
+  await refresh();
+}
+
 async function addLearningLink() {
   const urlEl = document.getElementById('learn-url');
   const noteEl = document.getElementById('learn-note');
@@ -573,6 +643,11 @@ async function refresh() {
   const ap = data.approval || {};
   document.getElementById('approval-brief').textContent =
     'Tier1 auto: ' + (ap.tier1_count || 0) + ' | Tier2 owner: ' + (ap.tier2_count || 0) + ' | Pre-approval: ' + (ap.preapproval_enabled ? 'ON' : 'OFF') + ' (' + (ap.preapproval_max_minutes || 0) + 'm)';
+
+  const convo = data.conversation || {};
+  const cr = convo.recent || [];
+  const lastChat = cr.length ? (cr[cr.length - 1].role + ': ' + cr[cr.length - 1].text.slice(0, 60)) : 'chưa có ví dụ';
+  document.getElementById('chat-brief').textContent = 'Examples: ' + (convo.examples_count || 0) + ' | Mới nhất: ' + lastChat;
 
   const learn = data.learning || {};
   const lr = learn.recent || [];

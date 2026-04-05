@@ -18,6 +18,7 @@
 - Added dashboard quick guidance card (`What to do now`) and `Copy Public Status` button.
 - Added Learning Inbox flow (`Add Link` + `Learn Now`) with persisted learning notes.
 - Added `Top 3 insights hôm nay` section in dashboard from learning notes.
+- Added `Chat Training Examples` capture flow (user/assistant examples) in dashboard + API.
 - Added API endpoint `/api/approval/check?action=...` for policy decision queries.
 
 ## v0.1.1
