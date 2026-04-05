@@ -25,6 +25,9 @@ Mục tiêu: biến bản demo 65MB/5s boot thành hệ thống có thể demo c
 - `docs/DEMO_SCRIPT.md` — kịch bản demo 2 phút
 - `docs/RELEASE_CHECKLIST.md` — checklist trước khi public
 - `docs/RELEASE_NOTES_v0.1.0.md` — release notes draft
+- `docs/RELEASE_COMMANDS.md` — lệnh phát hành/tag
+- `docs/LAUNCH_POST_VN.md` — mẫu bài đăng tiếng Việt
+- `docs/LAUNCH_POST_EN.md` — mẫu bài đăng tiếng Anh
 - `README.en.md` — bản tiếng Anh ngắn
 
 ## Nguyên tắc
