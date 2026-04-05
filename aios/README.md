@@ -20,6 +20,9 @@ Mục tiêu: biến bản demo 65MB/5s boot thành hệ thống có thể demo c
 ## Cấu trúc tài liệu
 - `docs/PHASE1_PLAN.md` — backlog có thứ tự ưu tiên
 - `docs/SKILL_MATRIX.md` — skill cần có + nguồn học + repo mẫu
+- `docs/DEMO_SCRIPT.md` — kịch bản demo 2 phút
+- `docs/RELEASE_CHECKLIST.md` — checklist trước khi public
+- `README.en.md` — bản tiếng Anh ngắn
 
 ## Nguyên tắc
 - Event-first, deterministic, observable
