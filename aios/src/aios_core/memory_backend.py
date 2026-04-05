@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import logging
 import os
@@ -53,6 +55,8 @@ class LangChainVectorMemoryBackend(BaseMemoryBackend):
     def __init__(self, store_dir: str | Path, collection: str = "aios_memory", quiet_startup: bool = True) -> None:
         if quiet_startup:
             os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+            os.environ.setdefault("HF_HUB_DISABLE_IMPLICIT_TOKEN", "1")
+            os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
             os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
             os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
             logging.getLogger("transformers").setLevel(logging.ERROR)
@@ -77,12 +81,27 @@ class LangChainVectorMemoryBackend(BaseMemoryBackend):
         self.collection = collection
         self.index_dir = self.store_dir / collection
 
-        self.emb = self._Emb(model_name="sentence-transformers/all-MiniLM-L6-v2")
-        if self.index_dir.exists() and (self.index_dir / "index.faiss").exists():
-            self.vs = self._FAISS.load_local(str(self.index_dir), self.emb, allow_dangerous_deserialization=True)
+        sink_out = io.StringIO()
+        sink_err = io.StringIO()
+        quiet_ctx = (
+            contextlib.redirect_stdout(sink_out),
+            contextlib.redirect_stderr(sink_err),
+        )
+        if quiet_startup:
+            with quiet_ctx[0], quiet_ctx[1]:
+                self.emb = self._Emb(model_name="sentence-transformers/all-MiniLM-L6-v2")
+                if self.index_dir.exists() and (self.index_dir / "index.faiss").exists():
+                    self.vs = self._FAISS.load_local(str(self.index_dir), self.emb, allow_dangerous_deserialization=True)
+                else:
+                    self.vs = self._FAISS.from_texts(["seed memory"], embedding=self.emb, metadatas=[{"seed": True}])
+                    self.vs.save_local(str(self.index_dir))
         else:
-            self.vs = self._FAISS.from_texts(["seed memory"], embedding=self.emb, metadatas=[{"seed": True}])
-            self.vs.save_local(str(self.index_dir))
+            self.emb = self._Emb(model_name="sentence-transformers/all-MiniLM-L6-v2")
+            if self.index_dir.exists() and (self.index_dir / "index.faiss").exists():
+                self.vs = self._FAISS.load_local(str(self.index_dir), self.emb, allow_dangerous_deserialization=True)
+            else:
+                self.vs = self._FAISS.from_texts(["seed memory"], embedding=self.emb, metadatas=[{"seed": True}])
+                self.vs.save_local(str(self.index_dir))
 
     def add(self, text: str, metadata: dict[str, Any] | None = None) -> None:
         self.vs.add_texts([text], metadatas=[metadata or {}])
