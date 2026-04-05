@@ -1,0 +1,31 @@
+{
+  "tiers": {
+    "tier1_auto": {
+      "description": "Low-risk actions auto-approved by agent",
+      "actions": [
+        "read_logs",
+        "run_tests",
+        "run_benchmark",
+        "generate_report",
+        "edit_docs",
+        "tune_noncritical_guard"
+      ]
+    },
+    "tier2_owner": {
+      "description": "High-impact actions requiring owner approval",
+      "actions": [
+        "sudo_command",
+        "security_policy_change",
+        "deploy_production",
+        "release_tag_push",
+        "external_send",
+        "secret_change",
+        "access_control_change"
+      ]
+    }
+  },
+  "preapproval": {
+    "enabled": true,
+    "maxWindowMinutes": 120
+  }
+}

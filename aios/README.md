@@ -103,11 +103,15 @@ Dashboard trực quan cho người dùng không kỹ thuật:
 make dashboard
 # mở trình duyệt: http://127.0.0.1:8787
 ```
-Trang này hiển thị trạng thái Healthy/Warning, bảng Active Agents (active/idle/down), summary event store và 20 events gần nhất.
+Trang này hiển thị trạng thái Healthy/Warning, bảng Active Agents (active/idle/down), Approval Policy tóm tắt, summary event store và 20 events gần nhất.
 
 Output benchmark sẽ trả JSON với 5 metrics cốt lõi:
 - `event_throughput`
 - `event_latency_p95`
+- `agent_restart_count`
+- `guard_alert_count`
+- `memory_idle_mb`
+ `event_latency_p95`
 - `agent_restart_count`
 - `guard_alert_count`
 - `memory_idle_mb`

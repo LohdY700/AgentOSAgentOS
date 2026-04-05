@@ -9,6 +9,7 @@ from typing import Any
 from .doctor import run_doctor
 from .event_store import JsonlEventStore
 from .store_config import load_event_store_config
+from .approval import load_policy
 
 
 def _parse_iso(ts: str) -> datetime:
@@ -27,6 +28,9 @@ def _agent_status(last_seen: datetime, now: datetime) -> str:
 
 def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: Path) -> dict[str, Any]:
     doctor = run_doctor(root_dir, guard_config_path, store_config_path)
+
+    approval_cfg_path = root_dir / "config" / "approval-policy.json"
+    approval_policy = load_policy(approval_cfg_path) if approval_cfg_path.exists() else {"tiers": {}}
 
     cfg = load_event_store_config(store_config_path)
     store_path = cfg.path if cfg.path.is_absolute() else root_dir / cfg.path
@@ -75,8 +79,17 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
     recent = recent[-20:]
     agents = sorted(agent_index.values(), key=lambda x: (x["status"], -int(x["events"])))
 
+    t1 = approval_policy.get("tiers", {}).get("tier1_auto", {}).get("actions", [])
+    t2 = approval_policy.get("tiers", {}).get("tier2_owner", {}).get("actions", [])
+
     return {
         "doctor": doctor,
+        "approval": {
+            "tier1_count": len(t1),
+            "tier2_count": len(t2),
+            "preapproval_enabled": bool(approval_policy.get("preapproval", {}).get("enabled", False)),
+            "preapproval_max_minutes": int(approval_policy.get("preapproval", {}).get("maxWindowMinutes", 0)),
+        },
         "store": {
             "path": str(store_path),
             "events": len(rows),
@@ -161,6 +174,11 @@ DASHBOARD_HTML = """<!doctype html>
   </div>
 
   <div class='card'>
+    <h3>Approval Policy</h3>
+    <div id='approval-brief'>Loading...</div>
+  </div>
+
+  <div class='card'>
     <h3>Store Summary</h3>
     <div id='store-brief'>Loading...</div>
     <button onclick='toggleStoreRaw()'>Xem chi tiết JSON</button>
@@ -205,6 +223,10 @@ async function refresh() {
     tr.innerHTML = `<td>${a.name}</td><td>${statusPill(a.status)}</td><td>${a.events}</td><td>${a.last_type || ''}</td><td>${a.last_seen || ''}</td>`;
     tbody.appendChild(tr);
   }
+
+  const ap = data.approval || {};
+  document.getElementById('approval-brief').textContent =
+    `Tier1 auto: ${ap.tier1_count || 0} | Tier2 owner: ${ap.tier2_count || 0} | Pre-approval: ${ap.preapproval_enabled ? 'ON' : 'OFF'} (${ap.preapproval_max_minutes || 0}m)`;
 
   const storeSummary = {
     path: data.store.path,

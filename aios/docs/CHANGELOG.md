@@ -13,6 +13,7 @@
 - Added `make release-check` target (ci-smoke + report + replay-store) for pre-publish flow.
 - Added local web dashboard (`make dashboard`) with health status + recent events for non-technical users.
 - Dashboard now includes Agent Activity table (active/idle/down, last event, event count).
+- Added 2-tier approval policy docs + config and dashboard approval summary card.
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.
