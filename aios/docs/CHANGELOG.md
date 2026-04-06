@@ -38,6 +38,7 @@
 - Added public/demo bundle for v0.1.5: `DEMO_SCRIPT_v0.1.5.md`, launch posts (VN/EN).
 - Added Mission Control dashboard (`/mission-control`) with team lanes, notes, artifacts, and recent commits.
 - Added Mission Control API endpoints: `/api/mission/status`, `/api/mission/note`.
+- Added `docs/RAG_PIPELINE_v1.md` to standardize retrieval flow, metadata schema, query strategy, and rollout plan.
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.
