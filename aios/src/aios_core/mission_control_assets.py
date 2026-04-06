@@ -17,6 +17,7 @@ MISSION_CONTROL_HTML = """<!doctype html>
 <body>
   <h1>🎯 Mission Control</h1>
   <p><b>PRIVATE</b> — chỉ để sếp Cường xem nội bộ, không public.</p>
+  <p><a href='/' style='font-weight:600'>⬅ Quay về AIOS Dashboard</a></p>
   <p id='meta'>Loading...</p>
   <div class='cols'>
     <div class='card'><h3>Team</h3><ul id='team'></ul></div>
