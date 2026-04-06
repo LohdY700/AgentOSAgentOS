@@ -36,6 +36,8 @@
 - Added memory latency guard script (`scripts/check_memory_benchmark.py`) + `make bench-memory-check`.
 - CI memory-profile now enforces memory latency threshold via `make bench-memory-check`.
 - Added public/demo bundle for v0.1.5: `DEMO_SCRIPT_v0.1.5.md`, launch posts (VN/EN).
+- Added Mission Control dashboard (`/mission-control`) with team lanes, notes, artifacts, and recent commits.
+- Added Mission Control API endpoints: `/api/mission/status`, `/api/mission/note`.
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.

@@ -18,6 +18,7 @@ from .learning_process import process_learning_inbox
 from .conversation_data import ChatExampleStore
 from .conversation_quality import FeedbackStore, quality_summary
 from .memory_backend import load_memory_backend
+from .mission_control_assets import MISSION_CONTROL_HTML, MISSION_CONTROL_JS
 
 
 def _parse_iso(ts: str) -> datetime:
@@ -162,6 +163,103 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
     }
 
 
+
+
+def _mission_path(root_dir: Path) -> Path:
+    return root_dir / "data" / "mission-control.json"
+
+
+def _default_mission_state() -> dict[str, Any]:
+    return {
+        "title": "AIOS Mission Control",
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "team": [
+            {"name": "Su", "role": "Lead/Orchestrator", "status": "active"},
+            {"name": "Behavior Trainer", "role": "Behavior Spec/Dataset/Rubric", "status": "active"},
+            {"name": "Memory/Core Agent", "role": "Memory engine + benchmark + doctor", "status": "planned"},
+            {"name": "Dashboard/API Agent", "role": "API + dashboard + integration tests", "status": "planned"},
+            {"name": "Docs/Release Agent", "role": "Release notes + demo + launch posts", "status": "active"},
+        ],
+        "lanes": [
+            {"name": "Behavior", "items": [
+                {"task": "Integrate rubric into daily feedback loop", "status": "todo"},
+                {"task": "Add quick-score template (5 criteria)", "status": "todo"}
+            ]},
+            {"name": "Memory/Core", "items": [
+                {"task": "Metadata-aware memory search", "status": "todo"},
+                {"task": "Add /api/memory/health", "status": "todo"}
+            ]},
+            {"name": "Dashboard/API", "items": [
+                {"task": "Show memory health + latency card", "status": "todo"},
+                {"task": "Integration test for filtered search", "status": "todo"}
+            ]},
+            {"name": "Docs/Release", "items": [
+                {"task": "Update docs for metadata search", "status": "todo"},
+                {"task": "Troubleshooting playbook", "status": "todo"}
+            ]},
+        ],
+        "notes": [],
+    }
+
+
+def _load_mission_state(root_dir: Path) -> dict[str, Any]:
+    path = _mission_path(root_dir)
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        state = _default_mission_state()
+        path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+        return state
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return _default_mission_state()
+
+
+def _save_mission_state(root_dir: Path, state: dict[str, Any]) -> None:
+    path = _mission_path(root_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    state["updated_at"] = datetime.now(timezone.utc).isoformat()
+    path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _mission_recent_commits(root_dir: Path, limit: int = 8) -> list[dict[str, str]]:
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", str(root_dir), "log", f"-n{max(1, limit)}", "--pretty=%h|%s|%ci"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        return []
+    rows: list[dict[str, str]] = []
+    for line in out.splitlines():
+        if "|" not in line:
+            continue
+        h, subj, dt = (line.split("|", 2) + ["", "", ""])[:3]
+        rows.append({"hash": h.strip(), "subject": subj.strip(), "date": dt.strip()})
+    return rows
+
+
+def _mission_artifacts(root_dir: Path, limit: int = 20) -> list[dict[str, str]]:
+    docs = root_dir / "docs"
+    if not docs.exists():
+        return []
+    rows = sorted(docs.glob("*.md"), key=lambda x: x.stat().st_mtime, reverse=True)
+    out: list[dict[str, str]] = []
+    for f in rows[: max(1, limit)]:
+        out.append({"name": f.name, "path": str(f.relative_to(root_dir))})
+    return out
+
+
+def build_mission_snapshot(root_dir: Path) -> dict[str, Any]:
+    state = _load_mission_state(root_dir)
+    return {
+        "ok": True,
+        "state": state,
+        "commits": _mission_recent_commits(root_dir),
+        "artifacts": _mission_artifacts(root_dir),
+    }
+
 def run_health_check(root_dir: Path, guard_config_path: Path, store_config_path: Path) -> dict[str, Any]:
     return run_doctor(root_dir, guard_config_path, store_config_path)
 
@@ -252,6 +350,22 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                     return
                 mem = load_memory_backend(root_dir)
                 self._send_json({"ok": True, "backend": mem.active, "items": mem.backend.search(query, limit=limit)})
+                return
+            if parsed.path == "/api/mission/status":
+                self._send_json(build_mission_snapshot(root_dir))
+                return
+            if parsed.path == "/mission-control.js":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/javascript; charset=utf-8")
+                self.send_header("Cache-Control", "no-store, max-age=0")
+                self.send_header("Pragma", "no-cache")
+                body = MISSION_CONTROL_JS.encode("utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            if parsed.path == "/mission-control":
+                self._send_html(MISSION_CONTROL_HTML)
                 return
             if parsed.path == "/app.js":
                 self.send_response(200)
@@ -351,6 +465,24 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                 except Exception as exc:  # noqa: BLE001
                     self._send_json({"ok": False, "error": str(exc)}, code=500)
                 return
+            if parsed.path == "/api/mission/note":
+                try:
+                    length = int(self.headers.get("Content-Length", "0"))
+                    raw = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
+                    body = json.loads(raw)
+                    note = str(body.get("note", "")).strip()
+                    if not note:
+                        self._send_json({"ok": False, "error": "note is required"}, code=400)
+                        return
+                    state = _load_mission_state(root_dir)
+                    notes = list(state.get("notes", []))
+                    notes.append({"text": note, "created_at": datetime.now(timezone.utc).isoformat()})
+                    state["notes"] = notes[-50:]
+                    _save_mission_state(root_dir, state)
+                    self._send_json({"ok": True})
+                except Exception as exc:  # noqa: BLE001
+                    self._send_json({"ok": False, "error": str(exc)}, code=500)
+                return
             self._send_json({"error": "not found"}, code=404)
 
         def log_message(self, fmt: str, *args):
@@ -407,6 +539,7 @@ DASHBOARD_HTML = """<!doctype html>
   <button onclick='runHealthCheck()'>Run Health Check</button>
   <button onclick='runBenchmark()'>Run Benchmark</button>
   <button onclick='copyPublicStatus()'>Copy Public Status</button>
+  <a href='/mission-control' style='margin-left:8px'>Open Mission Control</a>
   <div id='action-result' style='margin-top:8px;color:#444;'></div>
 
   <div class='card'>

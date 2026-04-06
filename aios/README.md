@@ -60,6 +60,8 @@ make bench-memory-check
 make ci-smoke
 make release-check
 make dashboard
+# Dashboard: http://127.0.0.1:8787
+# Mission Control: http://127.0.0.1:8787/mission-control
 ```
 
 ## CI Profiles
