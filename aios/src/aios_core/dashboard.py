@@ -4,6 +4,7 @@ import json
 import subprocess
 import sys
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,10 @@ from .conversation_data import ChatExampleStore
 from .conversation_quality import FeedbackStore, quality_summary
 from .memory_backend import load_memory_backend
 from .mission_control_assets import MISSION_CONTROL_HTML, MISSION_CONTROL_JS
+
+
+def _now_vn_iso() -> str:
+    return datetime.now(ZoneInfo("Asia/Bangkok")).isoformat()
 
 
 def _parse_iso(ts: str) -> datetime:
@@ -172,7 +177,7 @@ def _mission_path(root_dir: Path) -> Path:
 def _default_mission_state() -> dict[str, Any]:
     return {
         "title": "AIOS Mission Control",
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": _now_vn_iso(),
         "team": [
             {"name": "Su", "role": "Lead/Orchestrator", "status": "active"},
             {"name": "Behavior Trainer", "role": "Behavior Spec/Dataset/Rubric", "status": "active"},
@@ -218,7 +223,7 @@ def _load_mission_state(root_dir: Path) -> dict[str, Any]:
 def _save_mission_state(root_dir: Path, state: dict[str, Any]) -> None:
     path = _mission_path(root_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
-    state["updated_at"] = datetime.now(timezone.utc).isoformat()
+    state["updated_at"] = _now_vn_iso()
     path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
@@ -476,7 +481,7 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                         return
                     state = _load_mission_state(root_dir)
                     notes = list(state.get("notes", []))
-                    notes.append({"text": note, "created_at": datetime.now(timezone.utc).isoformat()})
+                    notes.append({"text": note, "created_at": _now_vn_iso()})
                     state["notes"] = notes[-50:]
                     _save_mission_state(root_dir, state)
                     self._send_json({"ok": True})
