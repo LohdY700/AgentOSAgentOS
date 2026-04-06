@@ -195,7 +195,14 @@ async function refreshMission() {
   const blockers = document.getElementById('blockers'); blockers.innerHTML='';
   for (const b of (st.blockers || []).slice().reverse()) {
     const li = document.createElement('li');
-    li.innerHTML = `[${esc(b.status)}] ${esc(b.text)} ${b.status === 'open' ? '<button style="margin-left:8px" onclick="resolveBlocker(\'' + esc(b.id) + '\')">Resolve</button>' : ''}`;
+    li.textContent = `[${esc(b.status)}] ${esc(b.text)}`;
+    if (b.status === 'open') {
+      const btn = document.createElement('button');
+      btn.style.marginLeft = '8px';
+      btn.textContent = 'Resolve';
+      btn.onclick = () => resolveBlocker(String(b.id || ''));
+      li.appendChild(btn);
+    }
     blockers.appendChild(li);
   }
 

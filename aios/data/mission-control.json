@@ -2,7 +2,7 @@
   "title": "AIOS Mission Control",
   "visibility": "private-owner-only",
   "owner": "Cường",
-  "updated_at": "2026-04-06T23:35:56.139006+07:00",
+  "updated_at": "2026-04-06T23:46:53.285301+07:00",
   "security": {
     "public": false,
     "note": "Mission Control chỉ dùng nội bộ cho 1 mình anh Cường xem trên local dashboard."
@@ -258,6 +258,10 @@
     {
       "created_at": "2026-04-06T23:35:56.138982+07:00",
       "text": "UX reliability: Mission Control now injects cache-busting version for JS to avoid stale cached UI."
+    },
+    {
+      "created_at": "2026-04-06T23:46:53.285276+07:00",
+      "text": "Fixed Mission Control loading issue on mobile: repaired JS blocker rendering syntax and restarted dashboard."
     }
   ],
   "blockers": []
