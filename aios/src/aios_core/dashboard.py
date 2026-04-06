@@ -479,7 +479,9 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                 self.wfile.write(body)
                 return
             if parsed.path == "/mission-control":
-                self._send_html(MISSION_CONTROL_HTML)
+                mc_ver = str(int(datetime.now(timezone.utc).timestamp()))
+                html = MISSION_CONTROL_HTML.replace("__MC_VER__", mc_ver)
+                self._send_html(html)
                 return
             if parsed.path == "/app.js":
                 self.send_response(200)

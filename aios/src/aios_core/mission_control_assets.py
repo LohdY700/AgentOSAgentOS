@@ -70,7 +70,7 @@ MISSION_CONTROL_HTML = """<!doctype html>
     </div>
     <ul id='notes'></ul>
   </div>
-<script src='/mission-control.js'></script>
+<script src='/mission-control.js?v=__MC_VER__'></script>
 </body>
 </html>
 """

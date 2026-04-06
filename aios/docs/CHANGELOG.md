@@ -42,6 +42,7 @@
 - Added local Obsidian second-brain flow (`config/second-brain.json`, `second-brain-index`, `second-brain-search`) to reduce token-heavy lookups.
 - Upgraded Mission Control with Kanban-lite task status updates, blockers management, KPI cards, and one-click daily report generation.
 - Added Mission Control auto-backup + auto-restore (`mission-control.backup.json`) to prevent data-loss frustration after crashes/restarts.
+- Added automatic cache-busting for Mission Control JS (`/mission-control.js?v=<timestamp>`) to avoid stale frontend after updates.
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.
