@@ -210,6 +210,7 @@ def _default_mission_state() -> dict[str, Any]:
             ]},
         ],
         "notes": [],
+        "blockers": [],
     }
 
 
@@ -264,12 +265,78 @@ def _mission_artifacts(root_dir: Path, limit: int = 20) -> list[dict[str, str]]:
 
 def build_mission_snapshot(root_dir: Path) -> dict[str, Any]:
     state = _load_mission_state(root_dir)
+    if "blockers" not in state:
+        state["blockers"] = []
     return {
         "ok": True,
         "state": state,
+        "kpi": _mission_kpi(root_dir, state),
         "commits": _mission_recent_commits(root_dir),
         "artifacts": _mission_artifacts(root_dir),
     }
+
+
+
+def _mission_kpi(root_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
+    commits = _mission_recent_commits(root_dir, limit=50)
+    lanes = list(state.get("lanes", []))
+    all_items: list[dict[str, Any]] = []
+    for lane in lanes:
+        all_items.extend(list(lane.get("items", [])))
+
+    done = sum(1 for x in all_items if str(x.get("status", "")).lower() == "done")
+    in_progress = sum(1 for x in all_items if str(x.get("status", "")).lower() == "in_progress")
+    blocked = sum(1 for x in all_items if str(x.get("status", "")).lower() == "blocked")
+    todo = sum(1 for x in all_items if str(x.get("status", "")).lower() == "todo")
+
+    return {
+        "tasks_total": len(all_items),
+        "done": done,
+        "in_progress": in_progress,
+        "blocked": blocked,
+        "todo": todo,
+        "commits_24h_hint": min(len(commits), 24),
+        "notes": len(state.get("notes", [])),
+        "blockers": len(state.get("blockers", [])),
+    }
+
+
+def _mission_write_daily_report(root_dir: Path, state: dict[str, Any]) -> Path:
+    now = datetime.now(ZoneInfo("Asia/Bangkok"))
+    out = root_dir / "docs" / f"MISSION_REPORT_{now.strftime('%Y-%m-%d')}.md"
+    kpi = _mission_kpi(root_dir, state)
+
+    lines = [
+        f"# Mission Report — {now.strftime('%Y-%m-%d %H:%M')} (Asia/Bangkok)",
+        "",
+        "## KPI",
+        f"- tasks_total: {kpi['tasks_total']}",
+        f"- done: {kpi['done']}",
+        f"- in_progress: {kpi['in_progress']}",
+        f"- blocked: {kpi['blocked']}",
+        f"- todo: {kpi['todo']}",
+        f"- mission_notes: {kpi['notes']}",
+        f"- blockers: {kpi['blockers']}",
+        "",
+        "## Lanes",
+    ]
+    for lane in state.get("lanes", []):
+        lines.append(f"### {lane.get('name', 'lane')}")
+        for it in lane.get("items", []):
+            lines.append(f"- [{it.get('status','todo')}] {it.get('task','')}")
+        lines.append("")
+
+    blockers = state.get("blockers", [])
+    lines.append("## Blockers")
+    if blockers:
+        for b in blockers:
+            lines.append(f"- [{b.get('status','open')}] {b.get('text','')} ({b.get('created_at','')})")
+    else:
+        lines.append("- none")
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return out
 
 def run_health_check(root_dir: Path, guard_config_path: Path, store_config_path: Path) -> dict[str, Any]:
     return run_doctor(root_dir, guard_config_path, store_config_path)
@@ -488,9 +555,87 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                     state = _load_mission_state(root_dir)
                     notes = list(state.get("notes", []))
                     notes.append({"text": note, "created_at": _now_vn_iso()})
-                    state["notes"] = notes[-50:]
+                    state["notes"] = notes[-100:]
                     _save_mission_state(root_dir, state)
                     self._send_json({"ok": True})
+                except Exception as exc:  # noqa: BLE001
+                    self._send_json({"ok": False, "error": str(exc)}, code=500)
+                return
+            if parsed.path == "/api/mission/task-status":
+                try:
+                    length = int(self.headers.get("Content-Length", "0"))
+                    raw = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
+                    body = json.loads(raw)
+                    lane_name = str(body.get("lane", "")).strip()
+                    task = str(body.get("task", "")).strip()
+                    status = str(body.get("status", "")).strip().lower()
+                    if status not in ("todo", "in_progress", "blocked", "done"):
+                        self._send_json({"ok": False, "error": "invalid status"}, code=400)
+                        return
+                    state = _load_mission_state(root_dir)
+                    changed = False
+                    for lane in state.get("lanes", []):
+                        if lane_name and str(lane.get("name", "")) != lane_name:
+                            continue
+                        for it in lane.get("items", []):
+                            if str(it.get("task", "")).strip() == task:
+                                it["status"] = status
+                                changed = True
+                                break
+                        if changed:
+                            break
+                    if not changed:
+                        self._send_json({"ok": False, "error": "task not found"}, code=404)
+                        return
+                    _save_mission_state(root_dir, state)
+                    self._send_json({"ok": True})
+                except Exception as exc:  # noqa: BLE001
+                    self._send_json({"ok": False, "error": str(exc)}, code=500)
+                return
+            if parsed.path == "/api/mission/blocker":
+                try:
+                    length = int(self.headers.get("Content-Length", "0"))
+                    raw = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
+                    body = json.loads(raw)
+                    action = str(body.get("action", "add")).strip().lower()
+                    state = _load_mission_state(root_dir)
+                    blockers = list(state.get("blockers", []))
+                    if action == "add":
+                        text = str(body.get("text", "")).strip()
+                        if not text:
+                            self._send_json({"ok": False, "error": "text is required"}, code=400)
+                            return
+                        blockers.append({"id": str(len(blockers) + 1), "text": text, "status": "open", "created_at": _now_vn_iso()})
+                    elif action == "resolve":
+                        bid = str(body.get("id", "")).strip()
+                        found = False
+                        for b in blockers:
+                            if str(b.get("id", "")) == bid:
+                                b["status"] = "resolved"
+                                b["resolved_at"] = _now_vn_iso()
+                                found = True
+                                break
+                        if not found:
+                            self._send_json({"ok": False, "error": "blocker not found"}, code=404)
+                            return
+                    else:
+                        self._send_json({"ok": False, "error": "invalid action"}, code=400)
+                        return
+                    state["blockers"] = blockers[-100:]
+                    _save_mission_state(root_dir, state)
+                    self._send_json({"ok": True})
+                except Exception as exc:  # noqa: BLE001
+                    self._send_json({"ok": False, "error": str(exc)}, code=500)
+                return
+            if parsed.path == "/api/mission/daily-report":
+                try:
+                    state = _load_mission_state(root_dir)
+                    out = _mission_write_daily_report(root_dir, state)
+                    notes = list(state.get("notes", []))
+                    notes.append({"text": f"Daily report generated: {out.name}", "created_at": _now_vn_iso()})
+                    state["notes"] = notes[-100:]
+                    _save_mission_state(root_dir, state)
+                    self._send_json({"ok": True, "path": str(out.relative_to(root_dir))})
                 except Exception as exc:  # noqa: BLE001
                     self._send_json({"ok": False, "error": str(exc)}, code=500)
                 return

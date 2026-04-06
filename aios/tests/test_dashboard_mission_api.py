@@ -56,6 +56,19 @@ class DashboardMissionApiTests(unittest.TestCase):
                 _, payload3 = self._request(port, "GET", "/api/mission/status")
                 notes = payload3.get("state", {}).get("notes", [])
                 self.assertGreaterEqual(len(notes), 1)
+
+                code4, payload4 = self._request(port, "POST", "/api/mission/task-status", {"lane": "Behavior", "task": "Integrate rubric into daily feedback loop", "status": "done"})
+                self.assertEqual(code4, 200)
+                self.assertTrue(payload4.get("ok"))
+
+                code5, payload5 = self._request(port, "POST", "/api/mission/blocker", {"action": "add", "text": "awaiting approval"})
+                self.assertEqual(code5, 200)
+                self.assertTrue(payload5.get("ok"))
+
+                code6, payload6 = self._request(port, "POST", "/api/mission/daily-report", {})
+                self.assertEqual(code6, 200)
+                self.assertTrue(payload6.get("ok"))
+                self.assertIn("MISSION_REPORT_", str(payload6.get("path", "")))
             finally:
                 server.shutdown()
                 server.server_close()
