@@ -1,0 +1,89 @@
+{
+  "title": "AIOS Mission Control",
+  "visibility": "private-owner-only",
+  "owner": "Cường",
+  "updated_at": "2026-04-06T00:20:00+07:00",
+  "security": {
+    "public": false,
+    "note": "Mission Control chỉ dùng nội bộ cho 1 mình anh Cường xem trên local dashboard."
+  },
+  "team": [
+    {"name": "Su", "role": "Lead/Orchestrator", "status": "active"},
+    {"name": "Behavior Trainer", "role": "Behavior Spec/Dataset/Rubric", "status": "active"},
+    {"name": "Memory/Core Agent", "role": "Memory engine + benchmark + doctor", "status": "active"},
+    {"name": "Dashboard/API Agent", "role": "API + dashboard + integration tests", "status": "active"},
+    {"name": "Docs/Release Agent", "role": "Release notes + demo + launch posts", "status": "active"}
+  ],
+  "yesterday_report": {
+    "date": "2026-04-05",
+    "summary": "Ship xong memory stack langchain-first + kiểm soát chất lượng + release/doc đầy đủ.",
+    "completed": [
+      "Ship langchain-first memory backend với fallback local (config + runtime).",
+      "Fix reliability: sửa import lỗi, thêm backend-handle cache để tránh warmup lặp.",
+      "Migrate embeddings import theo hướng langchain-huggingface (có backward fallback).",
+      "Nâng doctor: thêm memory_backend + memory_rw probe thực tế.",
+      "Thêm optional dependency group .[memory] trong pyproject.",
+      "Thêm CI job memory-profile (install .[memory] + test + doctor).",
+      "Update README: CI badge, CI profiles, memory setup hướng dẫn rõ ràng.",
+      "Clean-venv smoke test pass.",
+      "Tag và release notes: v0.1.4.",
+      "Tạo handoff cuối ngày: docs/HANDOFF_2026-04-05.md."
+    ],
+    "validation": {
+      "tests": "20/20 pass",
+      "doctor": "ok=true",
+      "memory": {
+        "requested": "langchain",
+        "active": "langchain",
+        "fallback_used": false
+      }
+    }
+  },
+  "lanes": [
+    {
+      "name": "Behavior",
+      "items": [
+        {"task": "Tạo BEHAVIOR_SPEC_v1.md", "status": "done"},
+        {"task": "Tạo BEHAVIOR_DATASET_v1.md (24 cặp)", "status": "done"},
+        {"task": "Tạo BEHAVIOR_RUBRIC_v1.md", "status": "done"}
+      ]
+    },
+    {
+      "name": "Memory/Core",
+      "items": [
+        {"task": "Integration test /api/memory/add + /api/memory/search", "status": "done"},
+        {"task": "Memory startup controls (quiet_startup + preload_on_startup)", "status": "done"},
+        {"task": "Memory benchmark command + make bench-memory", "status": "done"},
+        {"task": "CI latency threshold guard (bench-memory-check)", "status": "done"}
+      ]
+    },
+    {
+      "name": "Dashboard/API",
+      "items": [
+        {"task": "Mission Control page + API status/note", "status": "done"},
+        {"task": "Link Mission Control từ dashboard chính", "status": "done"}
+      ]
+    },
+    {
+      "name": "Docs/Release",
+      "items": [
+        {"task": "Release notes v0.1.4", "status": "done"},
+        {"task": "Release notes v0.1.5", "status": "done"},
+        {"task": "Demo script v0.1.5", "status": "done"},
+        {"task": "Launch post VN/EN v0.1.5", "status": "done"},
+        {"task": ".env.example + HF_TOKEN guide", "status": "done"}
+      ]
+    }
+  ],
+  "next_focus": [
+    "Metadata-aware memory search (kind/role/time-range).",
+    "Endpoint /api/memory/health + card hiển thị trên dashboard.",
+    "Tích hợp rubric hành vi vào loop feedback hằng ngày."
+  ],
+  "notes": [
+    {
+      "created_at": "2026-04-06T07:15:00+07:00",
+      "text": "Mission Control đã được nạp đầy đủ công việc hôm qua; dùng làm bảng báo cáo nội bộ cho sếp."
+    }
+  ]
+}

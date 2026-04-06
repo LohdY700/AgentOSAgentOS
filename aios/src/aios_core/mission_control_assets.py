@@ -16,6 +16,7 @@ MISSION_CONTROL_HTML = """<!doctype html>
 </head>
 <body>
   <h1>🎯 Mission Control</h1>
+  <p><b>PRIVATE</b> — chỉ để sếp Cường xem nội bộ, không public.</p>
   <p id='meta'>Loading...</p>
   <div class='cols'>
     <div class='card'><h3>Team</h3><ul id='team'></ul></div>
