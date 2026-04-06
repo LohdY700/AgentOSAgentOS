@@ -39,6 +39,7 @@
 - Added Mission Control dashboard (`/mission-control`) with team lanes, notes, artifacts, and recent commits.
 - Added Mission Control API endpoints: `/api/mission/status`, `/api/mission/note`.
 - Added `docs/RAG_PIPELINE_v1.md` to standardize retrieval flow, metadata schema, query strategy, and rollout plan.
+- Added local Obsidian second-brain flow (`config/second-brain.json`, `second-brain-index`, `second-brain-search`) to reduce token-heavy lookups.
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.

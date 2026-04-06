@@ -57,6 +57,8 @@ make bench-throughput
 make doctor
 make bench-memory
 make bench-memory-check
+make second-brain-index
+make second-brain-search
 make ci-smoke
 make release-check
 make dashboard
@@ -129,6 +131,13 @@ Memory backend hỗ trợ cấu hình `langchain` (có fallback local), xem ở 
 Có thể bật/tắt preload + giảm noise startup qua:
 - `langchain.quiet_startup` (mặc định `true`)
 - `langchain.preload_on_startup` (mặc định `true`)
+
+Second Brain local (Obsidian + RAG-lite):
+- cấu hình tại `config/second-brain.json` (`vault_path`, pattern markdown, index path)
+- index vault local:
+  - `make second-brain-index`
+- search local index (ít tốn token hơn hỏi model trực tiếp):
+  - `make second-brain-search`
 
 Production setup cho memory:
 ```bash

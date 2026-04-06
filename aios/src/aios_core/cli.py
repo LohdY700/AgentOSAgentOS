@@ -18,6 +18,7 @@ from .store_config import load_event_store_config
 from .doctor import render_doctor_json, doctor_exit_code
 from .dashboard import run_dashboard
 from .memory_backend import load_memory_backend
+from .second_brain import index_second_brain, search_second_brain
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -133,6 +134,14 @@ def _cmd_memory_benchmark(root_dir: Path, query: str, loops: int) -> None:
     }
     print(json.dumps(out, ensure_ascii=False))
 
+def _cmd_second_brain_index(root_dir: Path) -> None:
+    print(json.dumps(index_second_brain(root_dir), ensure_ascii=False))
+
+
+def _cmd_second_brain_search(root_dir: Path, query: str, limit: int) -> None:
+    print(json.dumps(search_second_brain(root_dir, query=query, limit=limit), ensure_ascii=False))
+
+
 def _cmd_replay_store(store_config_path: Path) -> None:
     store = _build_store(store_config_path)
     rows = list(store.replay())
@@ -162,6 +171,10 @@ def main() -> None:
     mem_bench = sub.add_parser("memory-benchmark", help="benchmark memory search latency")
     mem_bench.add_argument("--query", default="sếp", help="query string for memory search")
     mem_bench.add_argument("--loops", type=int, default=20, help="number of repeated searches")
+    sub.add_parser("second-brain-index", help="index local Obsidian vault into local second-brain store")
+    sb_search = sub.add_parser("second-brain-search", help="search local second-brain index")
+    sb_search.add_argument("--query", required=True, help="search query")
+    sb_search.add_argument("--limit", type=int, default=5)
     dash = sub.add_parser("dashboard", help="start local web dashboard for non-technical users")
     dash.add_argument("--host", default="127.0.0.1")
     dash.add_argument("--port", type=int, default=8787)
@@ -183,6 +196,10 @@ def main() -> None:
         run_dashboard(args.host, args.port, ROOT_DIR, guard_cfg, store_cfg)
     elif args.cmd == "memory-benchmark":
         _cmd_memory_benchmark(ROOT_DIR, args.query, args.loops)
+    elif args.cmd == "second-brain-index":
+        _cmd_second_brain_index(ROOT_DIR)
+    elif args.cmd == "second-brain-search":
+        _cmd_second_brain_search(ROOT_DIR, args.query, args.limit)
 
 
 if __name__ == "__main__":

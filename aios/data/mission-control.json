@@ -2,7 +2,7 @@
   "title": "AIOS Mission Control",
   "visibility": "private-owner-only",
   "owner": "Cường",
-  "updated_at": "2026-04-06T22:28:10.862492+07:00",
+  "updated_at": "2026-04-06T22:35:13.145242+07:00",
   "security": {
     "public": false,
     "note": "Mission Control chỉ dùng nội bộ cho 1 mình anh Cường xem trên local dashboard."
@@ -135,6 +135,10 @@
         {
           "task": "RAG pipeline v1 document and rollout",
           "status": "done"
+        },
+        {
+          "task": "Obsidian second-brain local index/search",
+          "status": "done"
         }
       ]
     },
@@ -230,6 +234,10 @@
     {
       "created_at": "2026-04-06T22:28:10.862460+07:00",
       "text": "Added docs/RAG_PIPELINE_v1.md and set RAG v1 rollout plan for Su/team."
+    },
+    {
+      "created_at": "2026-04-06T22:35:13.145217+07:00",
+      "text": "Implemented Obsidian second-brain local index/search + references shortlist."
     }
   ]
 }

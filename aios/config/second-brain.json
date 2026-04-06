@@ -1,0 +1,8 @@
+{
+  "vault_path": "../second-brain-vault",
+  "patterns": ["**/*.md"],
+  "max_chunk_chars": 900,
+  "min_chunk_chars": 120,
+  "push_to_memory_backend": true,
+  "index_path": "data/second-brain-index.jsonl"
+}
