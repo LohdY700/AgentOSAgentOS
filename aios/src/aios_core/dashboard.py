@@ -165,6 +165,12 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
             "init_ms": round(float(mem.init_ms), 2),
             "cache_hit": bool(mem.cache_hit),
         },
+        "progress": {
+            "recent_commits": len(_mission_recent_commits(root_dir, limit=50)),
+            "mission_notes": len(_load_mission_state(root_dir).get("notes", [])),
+            "learning_notes": len(notes_recent),
+            "chat_examples": len(chat_recent),
+        },
     }
 
 
@@ -694,13 +700,14 @@ function drawLife() {
   requestAnimationFrame(drawLife);
 }
 
-function updateLifeMeta(eventCount) {
-  // every 100 events grows 1 segment, cap at 24 for readability
-  const seg = Math.min(24, 1 + Math.floor((eventCount || 0) / 100));
+function updateLifeMeta(eventCount, progress) {
+  const p = progress || {};
+  const xp = (eventCount || 0) + (Number(p.recent_commits || 0) * 30) + (Number(p.mission_notes || 0) * 20) + (Number(p.learning_notes || 0) * 15) + (Number(p.chat_examples || 0) * 10);
+  const seg = Math.min(24, 1 + Math.floor(xp / 80));
   life.targetLen = seg;
-  const stage = seg <= 2 ? 'head-only' : (seg <= 8 ? 'growing' : 'evolved');
+  const stage = seg <= 3 ? 'head-only' : (seg <= 10 ? 'growing' : 'evolved');
   document.getElementById('life-stage').innerHTML = '<b>Stage:</b> ' + stage;
-  document.getElementById('life-length').innerHTML = '<b>Length:</b> ' + seg;
+  document.getElementById('life-length').innerHTML = '<b>Length:</b> ' + seg + ' | <b>XP:</b> ' + Math.round(xp);
 }
 
 function renderNextSteps(data) {
@@ -868,7 +875,7 @@ async function refresh() {
     lastSnapshot = data;
     renderNextSteps(data);
     const ok = !!(data && data.doctor && data.doctor.ok);
-  updateLifeMeta((data && data.store && data.store.events) || 0);
+  updateLifeMeta((data && data.store && data.store.events) || 0, (data && data.progress) || {});
   const el = document.getElementById('health');
   el.className = ok ? 'ok' : 'bad';
   el.textContent = ok ? '✅ Healthy' : '⚠️ Warning';
