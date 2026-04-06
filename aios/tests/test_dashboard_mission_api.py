@@ -52,6 +52,7 @@ class DashboardMissionApiTests(unittest.TestCase):
                 code2, payload2 = self._request(port, "POST", "/api/mission/note", {"note": "đã chốt sprint"})
                 self.assertEqual(code2, 200)
                 self.assertTrue(payload2.get("ok"))
+                self.assertTrue((root / "data" / "mission-control.backup.json").exists())
 
                 _, payload3 = self._request(port, "GET", "/api/mission/status")
                 notes = payload3.get("state", {}).get("notes", [])

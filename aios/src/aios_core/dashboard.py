@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -180,6 +181,10 @@ def _mission_path(root_dir: Path) -> Path:
     return root_dir / "data" / "mission-control.json"
 
 
+def _mission_backup_path(root_dir: Path) -> Path:
+    return root_dir / "data" / "mission-control.backup.json"
+
+
 def _default_mission_state() -> dict[str, Any]:
     return {
         "title": "AIOS Mission Control",
@@ -216,22 +221,53 @@ def _default_mission_state() -> dict[str, Any]:
 
 def _load_mission_state(root_dir: Path) -> dict[str, Any]:
     path = _mission_path(root_dir)
+    bak = _mission_backup_path(root_dir)
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
+        if bak.exists():
+            try:
+                data = json.loads(bak.read_text(encoding="utf-8"))
+                path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                return data
+            except Exception:
+                pass
         state = _default_mission_state()
         path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
         return state
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data
     except Exception:
+        if bak.exists():
+            try:
+                data = json.loads(bak.read_text(encoding="utf-8"))
+                path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                return data
+            except Exception:
+                pass
         return _default_mission_state()
 
 
 def _save_mission_state(root_dir: Path, state: dict[str, Any]) -> None:
     path = _mission_path(root_dir)
+    bak = _mission_backup_path(root_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
+
+    if path.exists():
+        try:
+            shutil.copy2(path, bak)
+        except Exception:
+            pass
+
     state["updated_at"] = _now_vn_iso()
-    path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    payload = json.dumps(state, ensure_ascii=False, indent=2)
+    path.write_text(payload, encoding="utf-8")
+
+    # keep backup in sync after successful write
+    try:
+        bak.write_text(payload, encoding="utf-8")
+    except Exception:
+        pass
 
 
 def _mission_recent_commits(root_dir: Path, limit: int = 8) -> list[dict[str, str]]:
