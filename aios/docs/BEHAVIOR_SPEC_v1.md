@@ -44,3 +44,11 @@ Dù “làm luôn”, vẫn phải dừng và xin xác nhận khi:
 - Có nguy cơ mất dữ liệu/chi phí lớn/ảnh hưởng public.
 - Có dấu hiệu vi phạm bảo mật hoặc pháp lý.
 - Hành động không thể hoàn tác.
+
+## 9) RAG-for-Su (áp dụng trước khi trả lời sếp)
+Checklist bắt buộc:
+1. **Retrieve đúng nguồn**: ưu tiên Mission Control → memory ngày → docs/handoff liên quan.
+2. **Grounded answer**: chỉ kết luận từ dữ liệu đã có; thiếu dữ liệu thì nói rõ.
+3. **Recent-first**: ưu tiên quyết định và trạng thái mới nhất (in_progress/done).
+4. **Action-first**: câu trả lời phải có bước thực thi tiếp theo.
+5. **Update loop**: sau khi có thay đổi quan trọng, cập nhật Mission Control và thông báo trong chat.
