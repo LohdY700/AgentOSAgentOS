@@ -6,6 +6,6 @@
     "store_dir": "data/langchain-memory",
     "collection": "aios_memory",
     "quiet_startup": true,
-    "preload_on_startup": true
+    "preload_on_startup": false
   }
 }
