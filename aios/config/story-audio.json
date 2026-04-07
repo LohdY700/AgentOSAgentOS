@@ -1,0 +1,12 @@
+{
+  "provider": "fpt",
+  "fpt": {
+    "api_base": "https://api.fpt.ai/hmi/tts/v5",
+    "speed": "0",
+    "voice_map": {
+      "bac": "banmai",
+      "trung": "myan",
+      "nam": "thuminh"
+    }
+  }
+}

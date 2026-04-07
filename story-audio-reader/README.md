@@ -20,3 +20,13 @@ Mở: http://127.0.0.1:8099
 - Tự chia đoạn theo xuống dòng để đọc mượt hơn
 
 > Ghi chú: OCR dùng `tesseract.js` CDN, cần có internet khi tải engine lần đầu.
+
+## Giọng vùng miền (server TTS)
+App hỗ trợ mode `Giọng vùng miền (FPT)` qua endpoint `/api/story/tts` (đi qua AIOS dashboard server).
+
+Cần set biến môi trường trước khi chạy dashboard:
+```bash
+export FPT_TTS_API_KEY=your_key_here
+```
+
+Map giọng cấu hình tại: `aios/config/story-audio.json` (`voice_map.bac/trung/nam`).
