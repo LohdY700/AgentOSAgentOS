@@ -139,6 +139,15 @@ Second Brain local (Obsidian + RAG-lite):
 - search local index (ít tốn token hơn hỏi model trực tiếp):
   - `make second-brain-search`
 
+Wiki pipeline v1 (Ingest -> Index -> Slide):
+- config: `config/wiki-pipeline.json`
+- ingest note markdown:
+  - `make wiki-ingest`
+- build link index:
+  - `make wiki-index`
+- export marp slide markdown:
+  - `make wiki-slide`
+
 Production setup cho memory:
 ```bash
 # cài optional deps cho semantic memory

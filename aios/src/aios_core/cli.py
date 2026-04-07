@@ -19,6 +19,7 @@ from .doctor import render_doctor_json, doctor_exit_code
 from .dashboard import run_dashboard
 from .memory_backend import load_memory_backend
 from .second_brain import index_second_brain, search_second_brain
+from .wiki_pipeline import wiki_ingest, wiki_build_index, wiki_export_slide
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -142,6 +143,19 @@ def _cmd_second_brain_search(root_dir: Path, query: str, limit: int) -> None:
     print(json.dumps(search_second_brain(root_dir, query=query, limit=limit), ensure_ascii=False))
 
 
+def _cmd_wiki_ingest(root_dir: Path, title: str, content: str, tags: str) -> None:
+    tag_list = [x.strip() for x in tags.split(",") if x.strip()]
+    print(json.dumps(wiki_ingest(root_dir, title=title, content=content, tags=tag_list), ensure_ascii=False))
+
+
+def _cmd_wiki_index(root_dir: Path) -> None:
+    print(json.dumps(wiki_build_index(root_dir), ensure_ascii=False))
+
+
+def _cmd_wiki_export_slide(root_dir: Path, slug: str) -> None:
+    print(json.dumps(wiki_export_slide(root_dir, slug=slug), ensure_ascii=False))
+
+
 def _cmd_replay_store(store_config_path: Path) -> None:
     store = _build_store(store_config_path)
     rows = list(store.replay())
@@ -175,6 +189,14 @@ def main() -> None:
     sb_search = sub.add_parser("second-brain-search", help="search local second-brain index")
     sb_search.add_argument("--query", required=True, help="search query")
     sb_search.add_argument("--limit", type=int, default=5)
+
+    wiki_ing = sub.add_parser("wiki-ingest", help="ingest text content into local wiki markdown")
+    wiki_ing.add_argument("--title", required=True)
+    wiki_ing.add_argument("--content", required=True)
+    wiki_ing.add_argument("--tags", default="")
+    sub.add_parser("wiki-index", help="build wiki link index")
+    wiki_slide = sub.add_parser("wiki-slide", help="export wiki note into marp slide markdown")
+    wiki_slide.add_argument("--slug", required=True)
     dash = sub.add_parser("dashboard", help="start local web dashboard for non-technical users")
     dash.add_argument("--host", default="127.0.0.1")
     dash.add_argument("--port", type=int, default=8787)
@@ -200,6 +222,12 @@ def main() -> None:
         _cmd_second_brain_index(ROOT_DIR)
     elif args.cmd == "second-brain-search":
         _cmd_second_brain_search(ROOT_DIR, args.query, args.limit)
+    elif args.cmd == "wiki-ingest":
+        _cmd_wiki_ingest(ROOT_DIR, args.title, args.content, args.tags)
+    elif args.cmd == "wiki-index":
+        _cmd_wiki_index(ROOT_DIR)
+    elif args.cmd == "wiki-slide":
+        _cmd_wiki_export_slide(ROOT_DIR, args.slug)
 
 
 if __name__ == "__main__":

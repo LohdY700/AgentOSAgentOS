@@ -1,4 +1,4 @@
-.PHONY: demo bench report test learning replay-store store-prune demo-lowram bench-lowram demo-throughput bench-throughput doctor bench-memory bench-memory-check second-brain-index second-brain-search ci-smoke release-check dashboard
+.PHONY: demo bench report test learning replay-store store-prune demo-lowram bench-lowram demo-throughput bench-throughput doctor bench-memory bench-memory-check second-brain-index second-brain-search wiki-ingest wiki-index wiki-slide ci-smoke release-check dashboard
 
 PYTHON_BIN:=$(shell if [ -x .venv/bin/python ]; then echo .venv/bin/python; else echo python3; fi)
 PYTHONPATH_SRC=PYTHONPATH=src
@@ -50,6 +50,15 @@ second-brain-index:
 
 second-brain-search:
 	$(PYTHONPATH_SRC) $(PYTHON_BIN) -m aios_core.cli second-brain-search --query "sếp" --limit 5
+
+wiki-ingest:
+	$(PYTHONPATH_SRC) $(PYTHON_BIN) -m aios_core.cli wiki-ingest --title "Demo Wiki" --content "Nội dung demo từ pipeline." --tags "demo,wiki"
+
+wiki-index:
+	$(PYTHONPATH_SRC) $(PYTHON_BIN) -m aios_core.cli wiki-index
+
+wiki-slide:
+	$(PYTHONPATH_SRC) $(PYTHON_BIN) -m aios_core.cli wiki-slide --slug demo-wiki
 
 ci-smoke:
 	$(MAKE) test

@@ -1,0 +1,5 @@
+{
+  "wiki_dir": "wiki",
+  "inbox_path": "data/wiki-inbox.jsonl",
+  "index_path": "data/wiki-index.json"
+}
