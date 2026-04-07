@@ -71,6 +71,40 @@ def wiki_build_index(root_dir: Path) -> dict[str, Any]:
     return {"ok": True, "count": len(items), "index_path": str(index_path.relative_to(root_dir))}
 
 
+def wiki_search(root_dir: Path, query: str, limit: int = 5) -> dict[str, Any]:
+    cfg = load_wiki_config(root_dir)
+    wiki_dir = root_dir / cfg.wiki_dir
+    q_terms = [x for x in query.lower().split() if x]
+    if not q_terms:
+        return {"ok": False, "error": "query is empty"}
+
+    scored: list[tuple[int, dict[str, Any]]] = []
+    for p in sorted(wiki_dir.glob("*.md")):
+        txt = p.read_text(encoding="utf-8", errors="ignore")
+        low = txt.lower()
+        score = sum(2 for t in q_terms if t in low)
+        if score <= 0:
+            continue
+        title = txt.splitlines()[0].lstrip("# ").strip() if txt else p.stem
+        snippet = " ".join([x.strip() for x in txt.splitlines()[1:6] if x.strip()])[:220]
+        scored.append((score, {"title": title, "path": str(p.relative_to(root_dir)), "snippet": snippet}))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return {"ok": True, "items": [x[1] for x in scored[: max(1, limit)]]}
+
+
+def wiki_answer(root_dir: Path, question: str, limit: int = 3) -> dict[str, Any]:
+    out = wiki_search(root_dir, question, limit=limit)
+    if not out.get("ok"):
+        return out
+    items = out.get("items", [])
+    if not items:
+        return {"ok": True, "answer": "Chưa tìm thấy dữ liệu phù hợp trong wiki.", "sources": []}
+    bullets = [f"- {x.get('title')}: {x.get('snippet')}" for x in items]
+    answer = "\n".join(bullets)
+    return {"ok": True, "answer": answer, "sources": [x.get("path") for x in items]}
+
+
 def wiki_export_slide(root_dir: Path, slug: str) -> dict[str, Any]:
     cfg = load_wiki_config(root_dir)
     src = root_dir / cfg.wiki_dir / f"{slug}.md"

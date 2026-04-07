@@ -22,7 +22,7 @@ from .conversation_quality import FeedbackStore, quality_summary, build_daily_ru
 from .memory_backend import load_memory_backend
 from .mission_control_assets import MISSION_CONTROL_HTML, MISSION_CONTROL_JS
 from .story_tts import synth_story_audio, StoryTtsError
-from .wiki_pipeline import wiki_ingest
+from .wiki_pipeline import wiki_ingest, wiki_search, wiki_answer
 
 
 def _now_vn_iso() -> str:
@@ -552,6 +552,18 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                     }
                 )
                 return
+            if parsed.path == "/api/wiki/search":
+                q = parse_qs(parsed.query)
+                query = str((q.get("q", [""])[0] or "")).strip()
+                limit = int((q.get("limit", ["5"])[0] or "5"))
+                self._send_json(wiki_search(root_dir, query=query, limit=limit))
+                return
+            if parsed.path == "/api/wiki/qa":
+                q = parse_qs(parsed.query)
+                question = str((q.get("q", [""])[0] or "")).strip()
+                limit = int((q.get("limit", ["3"])[0] or "3"))
+                self._send_json(wiki_answer(root_dir, question=question, limit=limit))
+                return
             if parsed.path == "/api/mission/status":
                 self._send_json(build_mission_snapshot(root_dir))
                 return
@@ -586,6 +598,9 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                     self._send_html(story_path.read_text(encoding="utf-8"))
                 else:
                     self._send_html("<h1>Story Reader not found</h1><p>Expected at ../story-audio-reader/index.html</p>")
+                return
+            if parsed.path in ("/wiki-search", "/wiki-search/index.html"):
+                self._send_html(WIKI_SEARCH_HTML)
                 return
             if parsed.path in ("/", "/index.html"):
                 self._send_html(DASHBOARD_HTML)
@@ -864,6 +879,7 @@ DASHBOARD_HTML = """<!doctype html>
   <button onclick='copyPublicStatus()'>Copy Public Status</button>
   <a href='/mission-control' style='margin-left:8px'>Open Mission Control</a>
   <a href='/story-reader' style='margin-left:8px'>Open Story Audio Reader</a>
+  <a href='/wiki-search' style='margin-left:8px'>Open Wiki Search & QA</a>
   <div id='action-result' style='margin-top:8px;color:#444;'></div>
 
   <div class='card'>
@@ -1265,3 +1281,37 @@ drawLife();
 refresh();
 setInterval(refresh, 15000);
 """
+
+
+WIKI_SEARCH_HTML = """<!doctype html>
+<html lang='vi'><head>
+<meta charset='utf-8'/><meta name='viewport' content='width=device-width, initial-scale=1'/>
+<title>Wiki Search & QA</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:920px;margin:24px auto;padding:0 12px}
+input,button{padding:8px} .card{border:1px solid #ddd;border-radius:10px;padding:12px;margin-top:10px}
+pre{white-space:pre-wrap}
+</style></head><body>
+<h1>🔎 Wiki Search & QA</h1>
+<p><a href='/'>⬅ Dashboard</a></p>
+<div class='card'>
+  <input id='q' style='width:65%' placeholder='Nhập câu hỏi hoặc từ khóa...' />
+  <button onclick='runSearch()'>Search</button>
+  <button onclick='runQA()'>Ask QA</button>
+</div>
+<div class='card'><h3>Search results</h3><div id='searchOut'></div></div>
+<div class='card'><h3>QA answer</h3><pre id='qaOut'>...</pre></div>
+<script>
+async function runSearch(){
+ const q=encodeURIComponent((document.getElementById('q').value||'').trim());
+ const r=await fetch('/api/wiki/search?q='+q+'&limit=6'); const d=await r.json();
+ const out=document.getElementById('searchOut'); out.innerHTML='';
+ (d.items||[]).forEach(it=>{ const div=document.createElement('div'); div.innerHTML='<b>'+it.title+'</b><br><small>'+it.path+'</small><br>'+it.snippet; out.appendChild(div); out.appendChild(document.createElement('hr')); });
+ if(!(d.items||[]).length) out.textContent='Không có kết quả.';
+}
+async function runQA(){
+ const q=encodeURIComponent((document.getElementById('q').value||'').trim());
+ const r=await fetch('/api/wiki/qa?q='+q+'&limit=3'); const d=await r.json();
+ document.getElementById('qaOut').textContent=d.answer||JSON.stringify(d,null,2);
+}
+</script></body></html>"""
