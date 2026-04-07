@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 
 @dataclass(slots=True)
@@ -44,3 +45,57 @@ def quality_summary(rows: list[dict]) -> dict:
     total = good + bad
     score = round((good / total) * 100, 1) if total else 0.0
     return {"total": total, "good": good, "bad": bad, "score": score}
+
+
+def _criterion_score(text: str, kind: str) -> int:
+    t = text.strip()
+    low = t.lower()
+    if kind == "concise":
+        if len(t) == 0:
+            return 0
+        if len(t) <= 220:
+            return 2
+        if len(t) <= 500:
+            return 1
+        return 0
+    if kind == "actionable":
+        hits = sum(1 for w in ["đã", "sẽ", "bước", "tiếp", "làm", "xong", "✅"] if w in low)
+        return 2 if hits >= 2 else (1 if hits == 1 else 0)
+    if kind == "role_tone":
+        if "sếp" in low and ("em" in low or "su" in low):
+            return 2
+        if "sếp" in low or "em" in low:
+            return 1
+        return 0
+    if kind == "clarity":
+        lines = [x for x in t.splitlines() if x.strip()]
+        bullets = sum(1 for ln in lines if ln.strip().startswith(("-", "•", "1)", "2)", "3)")))
+        return 2 if bullets >= 1 else (1 if len(lines) <= 2 else 0)
+    if kind == "no_fluff":
+        fluff = ["rất vui", "hân hạnh", "có thể", "tùy trường hợp"]
+        bad = sum(1 for w in fluff if w in low)
+        return 2 if bad == 0 else (1 if bad == 1 else 0)
+    return 0
+
+
+def rubric_score(text: str) -> dict[str, Any]:
+    criteria = ["concise", "actionable", "role_tone", "clarity", "no_fluff"]
+    detail = {c: _criterion_score(text, c) for c in criteria}
+    total = sum(detail.values())
+    return {
+        "total": total,
+        "max": 10,
+        "detail": detail,
+        "pass": total >= 7,
+    }
+
+
+def build_daily_rubric_review(examples: list[dict], limit: int = 5) -> dict[str, Any]:
+    assistant_rows = [x for x in examples if str(x.get("role", "")) == "assistant"]
+    scored = []
+    for row in assistant_rows:
+        text = str(row.get("text", ""))
+        rs = rubric_score(text)
+        scored.append({"text": text, "created_at": row.get("created_at", ""), "rubric": rs})
+    scored.sort(key=lambda x: int(x["rubric"]["total"]))
+    return {"ok": True, "items": scored[: max(1, limit)]}

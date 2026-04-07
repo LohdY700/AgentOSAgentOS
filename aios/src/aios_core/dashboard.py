@@ -18,7 +18,7 @@ from .approval import load_policy, classify_action
 from .learning import LearningInbox
 from .learning_process import process_learning_inbox
 from .conversation_data import ChatExampleStore
-from .conversation_quality import FeedbackStore, quality_summary
+from .conversation_quality import FeedbackStore, quality_summary, build_daily_rubric_review
 from .memory_backend import load_memory_backend
 from .mission_control_assets import MISSION_CONTROL_HTML, MISSION_CONTROL_JS
 
@@ -454,6 +454,13 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                 store = FeedbackStore(root_dir / "data" / "conversation-feedback.jsonl")
                 rows = store.list_recent(limit=200)
                 self._send_json({"ok": True, "summary": quality_summary(rows), "recent": rows[-20:]})
+                return
+            if parsed.path == "/api/conversation/rubric-review":
+                q = parse_qs(parsed.query)
+                limit = int((q.get("limit", ["5"])[0] or "5"))
+                ex_store = ChatExampleStore(root_dir / "data" / "chat-examples.jsonl")
+                rows = ex_store.list_recent(limit=200)
+                self._send_json(build_daily_rubric_review(rows, limit=limit))
                 return
             if parsed.path == "/api/memory/search":
                 q = parse_qs(parsed.query)

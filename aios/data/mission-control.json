@@ -2,7 +2,7 @@
   "title": "AIOS Mission Control",
   "visibility": "private-owner-only",
   "owner": "Cường",
-  "updated_at": "2026-04-07T07:08:46.573785+07:00",
+  "updated_at": "2026-04-07T10:51:15.123696+07:00",
   "security": {
     "public": false,
     "note": "Mission Control chỉ dùng nội bộ cho 1 mình anh Cường xem trên local dashboard."
@@ -81,7 +81,7 @@
         },
         {
           "task": "Integrate rubric into daily feedback loop",
-          "status": "in_progress"
+          "status": "done"
         },
         {
           "task": "RAG-for-Su checklist in BEHAVIOR_SPEC_v1",
@@ -278,6 +278,10 @@
     {
       "created_at": "2026-04-07T07:08:46.573765+07:00",
       "text": "Applied continual-learning guidance: added followup_after_training skill and 7-day blueprint doc."
+    },
+    {
+      "created_at": "2026-04-07T10:51:15.123674+07:00",
+      "text": "Milestone done: integrated rubric loop with API /api/conversation/rubric-review and rubric scoring tests."
     }
   ],
   "blockers": []
