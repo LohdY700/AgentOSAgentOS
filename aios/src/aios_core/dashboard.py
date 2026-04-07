@@ -22,6 +22,7 @@ from .conversation_quality import FeedbackStore, quality_summary, build_daily_ru
 from .memory_backend import load_memory_backend
 from .mission_control_assets import MISSION_CONTROL_HTML, MISSION_CONTROL_JS
 from .story_tts import synth_story_audio, StoryTtsError
+from .wiki_pipeline import wiki_ingest
 
 
 def _now_vn_iso() -> str:
@@ -688,6 +689,24 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                     self._send_audio_mp3(audio)
                 except StoryTtsError as exc:
                     self._send_json({"ok": False, "error": str(exc)}, code=400)
+                except Exception as exc:  # noqa: BLE001
+                    self._send_json({"ok": False, "error": str(exc)}, code=500)
+                return
+            if parsed.path == "/api/wiki/ingest":
+                try:
+                    length = int(self.headers.get("Content-Length", "0"))
+                    raw = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
+                    body = json.loads(raw)
+                    title = str(body.get("title", "")).strip()
+                    content = str(body.get("content", "")).strip()
+                    tags = body.get("tags", []) or []
+                    if not title or not content:
+                        self._send_json({"ok": False, "error": "title and content are required"}, code=400)
+                        return
+                    if isinstance(tags, str):
+                        tags = [x.strip() for x in tags.split(",") if x.strip()]
+                    out = wiki_ingest(root_dir, title=title, content=content, tags=list(tags))
+                    self._send_json(out)
                 except Exception as exc:  # noqa: BLE001
                     self._send_json({"ok": False, "error": str(exc)}, code=500)
                 return
