@@ -67,6 +67,12 @@ class DashboardMemoryApiTests(unittest.TestCase):
                 items = search_payload.get("items", [])
                 self.assertGreaterEqual(len(items), 1)
                 self.assertIn("cafe", str(items[0].get("text", "")).lower())
+
+                code_auto, auto_payload = self._request(port, "GET", "/api/memory/search?q=s%E1%BA%BFp%20th%C3%ADch%20g%C3%AC&limit=5")
+                self.assertEqual(code_auto, 200)
+                self.assertTrue(auto_payload.get("ok"))
+                self.assertTrue(auto_payload.get("auto_filter"))
+                self.assertEqual(auto_payload.get("filters", {}).get("kind"), "preference")
             finally:
                 server.shutdown()
                 server.server_close()

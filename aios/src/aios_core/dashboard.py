@@ -177,6 +177,21 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
 
 
 
+def _suggest_memory_filters(query: str) -> dict[str, str]:
+    q = query.strip().lower()
+    if not q:
+        return {}
+    if any(k in q for k in ["tiến độ", "status", "đang làm", "kế hoạch"]):
+        return {"kind": "task"}
+    if any(k in q for k in ["thích", "xưng hô", "phong cách", "preference"]):
+        return {"kind": "preference"}
+    if any(k in q for k in ["quy trình", "cách làm", "followup", "meeting", "proposal", "skill"]):
+        return {"kind": "skill"}
+    if any(k in q for k in ["policy", "compliance", "quy định"]):
+        return {"source": "policy"}
+    return {}
+
+
 def _mission_path(root_dir: Path) -> Path:
     return root_dir / "data" / "mission-control.json"
 
@@ -474,13 +489,16 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                     v = str((q.get(key, [""])[0] or "")).strip()
                     if v:
                         filters[key] = v
+                auto_filters = _suggest_memory_filters(query) if not filters else {}
+                applied_filters = filters or auto_filters
                 mem = load_memory_backend(root_dir)
                 self._send_json(
                     {
                         "ok": True,
                         "backend": mem.active,
-                        "filters": filters,
-                        "items": mem.backend.search(query, limit=limit, metadata_filters=filters),
+                        "filters": applied_filters,
+                        "auto_filter": bool(auto_filters),
+                        "items": mem.backend.search(query, limit=limit, metadata_filters=applied_filters),
                     }
                 )
                 return

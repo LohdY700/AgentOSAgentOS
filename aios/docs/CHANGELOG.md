@@ -44,6 +44,7 @@
 - Added Mission Control auto-backup + auto-restore (`mission-control.backup.json`) to prevent data-loss frustration after crashes/restarts.
 - Added automatic cache-busting for Mission Control JS (`/mission-control.js?v=<timestamp>`) to avoid stale frontend after updates.
 - Added metadata-aware memory search filters (`kind`, `role`, `source`) in `/api/memory/search` and memory backends.
+- Applied RAG retrieval strategy v1: auto intent-based metadata filters when explicit filters are absent.
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.
