@@ -18,7 +18,12 @@ class BaseMemoryBackend:
     def add(self, text: str, metadata: dict[str, Any] | None = None) -> None:  # pragma: no cover
         raise NotImplementedError
 
-    def search(self, query: str, limit: int = 5) -> list[dict[str, Any]]:  # pragma: no cover
+    def search(
+        self,
+        query: str,
+        limit: int = 5,
+        metadata_filters: dict[str, str] | None = None,
+    ) -> list[dict[str, Any]]:  # pragma: no cover
         raise NotImplementedError
 
 
@@ -34,17 +39,31 @@ class LocalJsonlMemoryBackend(BaseMemoryBackend):
         with self.path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
-    def search(self, query: str, limit: int = 5) -> list[dict[str, Any]]:
+    def search(
+        self,
+        query: str,
+        limit: int = 5,
+        metadata_filters: dict[str, str] | None = None,
+    ) -> list[dict[str, Any]]:
         if not self.path.exists():
             return []
         q = query.strip().lower()
         rows: list[dict[str, Any]] = []
+        filters = metadata_filters or {}
         for line in self.path.read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
             row = json.loads(line)
             text = str(row.get("text", ""))
-            if q in text.lower():
+            if q and q not in text.lower():
+                continue
+            meta = row.get("metadata", {}) or {}
+            ok = True
+            for k, v in filters.items():
+                if v and str(meta.get(k, "")).lower() != str(v).lower():
+                    ok = False
+                    break
+            if ok:
                 rows.append(row)
         return rows[-max(1, limit):][::-1]
 
@@ -107,11 +126,27 @@ class LangChainVectorMemoryBackend(BaseMemoryBackend):
         self.vs.add_texts([text], metadatas=[metadata or {}])
         self.vs.save_local(str(self.index_dir))
 
-    def search(self, query: str, limit: int = 5) -> list[dict[str, Any]]:
-        docs = self.vs.similarity_search(query, k=max(1, limit))
+    def search(
+        self,
+        query: str,
+        limit: int = 5,
+        metadata_filters: dict[str, str] | None = None,
+    ) -> list[dict[str, Any]]:
+        docs = self.vs.similarity_search(query, k=max(1, limit * 3))
         out: list[dict[str, Any]] = []
+        filters = metadata_filters or {}
         for d in docs:
-            out.append({"text": d.page_content, "metadata": d.metadata})
+            row = {"text": d.page_content, "metadata": d.metadata}
+            meta = row.get("metadata", {}) or {}
+            ok = True
+            for k, v in filters.items():
+                if v and str(meta.get(k, "")).lower() != str(v).lower():
+                    ok = False
+                    break
+            if ok:
+                out.append(row)
+            if len(out) >= max(1, limit):
+                break
         return out
 
 

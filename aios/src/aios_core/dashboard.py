@@ -469,8 +469,20 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                 if not query:
                     self._send_json({"ok": False, "error": "missing q"}, code=400)
                     return
+                filters: dict[str, str] = {}
+                for key in ("kind", "role", "source"):
+                    v = str((q.get(key, [""])[0] or "")).strip()
+                    if v:
+                        filters[key] = v
                 mem = load_memory_backend(root_dir)
-                self._send_json({"ok": True, "backend": mem.active, "items": mem.backend.search(query, limit=limit)})
+                self._send_json(
+                    {
+                        "ok": True,
+                        "backend": mem.active,
+                        "filters": filters,
+                        "items": mem.backend.search(query, limit=limit, metadata_filters=filters),
+                    }
+                )
                 return
             if parsed.path == "/api/mission/status":
                 self._send_json(build_mission_snapshot(root_dir))

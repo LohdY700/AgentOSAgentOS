@@ -19,6 +19,12 @@ class MemoryBackendTests(unittest.TestCase):
             self.assertEqual(len(out), 1)
             self.assertEqual(out[0]["metadata"]["k"], 1)
 
+            b.add("pref row", {"kind": "preference", "role": "assistant"})
+            b.add("pref row 2", {"kind": "preference", "role": "user"})
+            f = b.search("pref", limit=5, metadata_filters={"kind": "preference", "role": "assistant"})
+            self.assertEqual(len(f), 1)
+            self.assertEqual(f[0]["metadata"]["role"], "assistant")
+
     def test_langchain_requested_fallback_local(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

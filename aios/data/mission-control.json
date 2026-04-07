@@ -2,7 +2,7 @@
   "title": "AIOS Mission Control",
   "visibility": "private-owner-only",
   "owner": "Cường",
-  "updated_at": "2026-04-07T10:51:15.123696+07:00",
+  "updated_at": "2026-04-07T11:04:38.995996+07:00",
   "security": {
     "public": false,
     "note": "Mission Control chỉ dùng nội bộ cho 1 mình anh Cường xem trên local dashboard."
@@ -126,7 +126,7 @@
         },
         {
           "task": "Add metadata-aware memory search (kind/role/time-range)",
-          "status": "in_progress"
+          "status": "done"
         },
         {
           "task": "Add /api/memory/health",
@@ -282,6 +282,10 @@
     {
       "created_at": "2026-04-07T10:51:15.123674+07:00",
       "text": "Milestone done: integrated rubric loop with API /api/conversation/rubric-review and rubric scoring tests."
+    },
+    {
+      "created_at": "2026-04-07T11:04:38.995975+07:00",
+      "text": "Milestone done: metadata-aware memory search now supports filters kind/role/source in API and backend."
     }
   ],
   "blockers": []
