@@ -20,6 +20,8 @@
   <div class="card">
     <textarea id="story" placeholder="Dán nội dung truyện vào đây..."></textarea>
     <div class="row">
+      <input id="imgFile" type="file" accept="image/*" />
+      <button id="ocrBtn">🖼 OCR từ ảnh</button>
       <select id="voice"></select>
       <label>Tốc độ <input id="rate" type="range" min="0.6" max="1.4" step="0.05" value="1" /></label>
       <button id="readBtn">▶️ Đọc</button>
@@ -31,6 +33,7 @@
     <div id="status">Sẵn sàng.</div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script>
     const synth = window.speechSynthesis;
     const voiceEl = document.getElementById('voice');
@@ -97,6 +100,27 @@
     document.getElementById('pauseBtn').onclick = () => { synth.pause(); setStatus('Đã tạm dừng.'); };
     document.getElementById('resumeBtn').onclick = () => { synth.resume(); setStatus('Tiếp tục đọc...'); };
     document.getElementById('stopBtn').onclick = () => { synth.cancel(); setStatus('Đã dừng.'); };
+
+    document.getElementById('ocrBtn').onclick = async () => {
+      const f = document.getElementById('imgFile').files?.[0];
+      if (!f) return setStatus('Chọn file ảnh trước đã sếp.');
+      if (!window.Tesseract) return setStatus('Thiếu OCR engine (Tesseract).');
+      setStatus('Đang OCR ảnh...');
+      try {
+        const { data } = await Tesseract.recognize(f, 'vie+eng', {
+          logger: (m) => {
+            if (m && m.status) {
+              const p = m.progress ? Math.round(m.progress * 100) : 0;
+              setStatus(`OCR: ${m.status} ${p}%`);
+            }
+          }
+        });
+        storyEl.value = (data && data.text ? data.text : '').trim();
+        setStatus(storyEl.value ? 'OCR xong ✅ Đã nạp text vào ô truyện.' : 'OCR xong nhưng chưa nhận diện được chữ.');
+      } catch (e) {
+        setStatus('OCR lỗi: ' + ((e && e.message) || e));
+      }
+    };
 
     document.getElementById('sampleBtn').onclick = () => {
       storyEl.value = `Ngày xửa ngày xưa, có hai chị em cùng cha khác mẹ là Tấm và Cám.\n\nTấm hiền lành, chăm chỉ nhưng bị dì ghẻ bắt làm việc nặng nhọc.\n\nNhờ sự giúp đỡ của Bụt, Tấm vượt qua nhiều thử thách...`;
