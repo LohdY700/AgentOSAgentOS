@@ -41,6 +41,40 @@ def _agent_status(last_seen: datetime, now: datetime) -> str:
     return "down"
 
 
+def _memory_health(root_dir: Path) -> dict[str, Any]:
+    mem = load_memory_backend(root_dir)
+    backend = mem.backend
+    store_path = ""
+    items = None
+
+    if hasattr(backend, "path"):
+        p = Path(getattr(backend, "path"))
+        store_path = str(p)
+        if p.exists():
+            items = len([x for x in p.read_text(encoding="utf-8").splitlines() if x.strip()])
+        else:
+            items = 0
+    elif hasattr(backend, "index_dir"):
+        idx = Path(getattr(backend, "index_dir"))
+        store_path = str(idx)
+        if idx.exists():
+            items = len(list(idx.glob("*.pkl"))) + len(list(idx.glob("*.faiss")))
+        else:
+            items = 0
+
+    return {
+        "ok": True,
+        "requested": mem.requested,
+        "active": mem.active,
+        "fallback_used": mem.fallback_used,
+        "init_ms": round(float(mem.init_ms), 2),
+        "cache_hit": bool(mem.cache_hit),
+        "store_path": store_path,
+        "items": items,
+        "note": mem.note,
+    }
+
+
 def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: Path) -> dict[str, Any]:
     doctor = run_doctor(root_dir, guard_config_path, store_config_path)
 
@@ -130,6 +164,7 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
     feedback_stat = quality_summary(feedback_recent)
 
     mem = load_memory_backend(root_dir)
+    mem_health = _memory_health(root_dir)
 
     return {
         "doctor": doctor,
@@ -166,6 +201,7 @@ def build_snapshot(root_dir: Path, guard_config_path: Path, store_config_path: P
             "init_ms": round(float(mem.init_ms), 2),
             "cache_hit": bool(mem.cache_hit),
         },
+        "memory_health": mem_health,
         "progress": {
             "recent_commits": len(_mission_recent_commits(root_dir, limit=50)),
             "mission_notes": len(_load_mission_state(root_dir).get("notes", [])),
@@ -476,6 +512,9 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                 ex_store = ChatExampleStore(root_dir / "data" / "chat-examples.jsonl")
                 rows = ex_store.list_recent(limit=200)
                 self._send_json(build_daily_rubric_review(rows, limit=limit))
+                return
+            if parsed.path == "/api/memory/health":
+                self._send_json(_memory_health(root_dir))
                 return
             if parsed.path == "/api/memory/search":
                 q = parse_qs(parsed.query)
@@ -844,6 +883,7 @@ DASHBOARD_HTML = """<!doctype html>
   <div class='card'>
     <h3>Memory Backend</h3>
     <div id='memory-brief'>Loading...</div>
+    <div id='memory-health' style='margin-top:6px;color:#444'>Loading...</div>
   </div>
 
   <div class='card'>
@@ -1113,8 +1153,11 @@ async function refresh() {
     'Tier1 auto: ' + (ap.tier1_count || 0) + ' | Tier2 owner: ' + (ap.tier2_count || 0) + ' | Pre-approval: ' + (ap.preapproval_enabled ? 'ON' : 'OFF') + ' (' + (ap.preapproval_max_minutes || 0) + 'm)';
 
   const mb = data.memory_backend || {};
+  const mh = data.memory_health || {};
   document.getElementById('memory-brief').textContent =
     'Requested: ' + (mb.requested || 'local') + ' | Active: ' + (mb.active || 'local') + (mb.fallback_used ? ' (fallback)' : '') + (mb.note ? ' | Note: ' + mb.note : '');
+  document.getElementById('memory-health').textContent =
+    'Init: ' + (mh.init_ms ?? '-') + ' ms | Cache: ' + ((mh.cache_hit) ? 'hit' : 'miss') + ' | Items: ' + (mh.items ?? '-') + (mh.store_path ? (' | Store: ' + mh.store_path) : '');
 
   const convo = data.conversation || {};
   const cr = convo.recent || [];

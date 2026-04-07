@@ -45,6 +45,7 @@
 - Added automatic cache-busting for Mission Control JS (`/mission-control.js?v=<timestamp>`) to avoid stale frontend after updates.
 - Added metadata-aware memory search filters (`kind`, `role`, `source`) in `/api/memory/search` and memory backends.
 - Applied RAG retrieval strategy v1: auto intent-based metadata filters when explicit filters are absent.
+- Added `/api/memory/health` endpoint and dashboard memory health card (init/cache/items/store path).
 
 ## v0.1.1
 - Guard prefix allowlist (`allowed_prefixes`) added.

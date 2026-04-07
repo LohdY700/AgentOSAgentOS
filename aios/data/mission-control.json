@@ -2,7 +2,7 @@
   "title": "AIOS Mission Control",
   "visibility": "private-owner-only",
   "owner": "Cường",
-  "updated_at": "2026-04-07T11:38:27.684214+07:00",
+  "updated_at": "2026-04-07T11:54:32.781374+07:00",
   "security": {
     "public": false,
     "note": "Mission Control chỉ dùng nội bộ cho 1 mình anh Cường xem trên local dashboard."
@@ -130,7 +130,7 @@
         },
         {
           "task": "Add /api/memory/health",
-          "status": "todo"
+          "status": "done"
         },
         {
           "task": "RAG cheatsheet application to AIOS retrieval pipeline",
@@ -171,7 +171,7 @@
         },
         {
           "task": "Show memory health + latency card",
-          "status": "in_progress"
+          "status": "done"
         }
       ]
     },
@@ -290,7 +290,16 @@
     {
       "created_at": "2026-04-07T11:38:27.684190+07:00",
       "text": "Milestone done: applied RAG retrieval strategy with auto intent-based metadata filters for memory search."
+    },
+    {
+      "created_at": "2026-04-07T11:43:18.022684+07:00",
+      "text": "Program naming approved: Training Camp cho Su v1."
+    },
+    {
+      "created_at": "2026-04-07T11:54:32.781342+07:00",
+      "text": "Milestones done: added /api/memory/health and memory health card on dashboard."
     }
   ],
-  "blockers": []
+  "blockers": [],
+  "program_name": "Training Camp cho Su v1"
 }
