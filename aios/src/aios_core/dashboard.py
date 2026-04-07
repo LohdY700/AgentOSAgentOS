@@ -569,6 +569,13 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                 self.end_headers()
                 self.wfile.write(body)
                 return
+            if parsed.path in ("/story-reader", "/story-reader/index.html"):
+                story_path = root_dir.parent / "story-audio-reader" / "index.html"
+                if story_path.exists():
+                    self._send_html(story_path.read_text(encoding="utf-8"))
+                else:
+                    self._send_html("<h1>Story Reader not found</h1><p>Expected at ../story-audio-reader/index.html</p>")
+                return
             if parsed.path in ("/", "/index.html"):
                 self._send_html(DASHBOARD_HTML)
                 return
@@ -810,6 +817,7 @@ DASHBOARD_HTML = """<!doctype html>
   <button onclick='runBenchmark()'>Run Benchmark</button>
   <button onclick='copyPublicStatus()'>Copy Public Status</button>
   <a href='/mission-control' style='margin-left:8px'>Open Mission Control</a>
+  <a href='/story-reader' style='margin-left:8px'>Open Story Audio Reader</a>
   <div id='action-result' style='margin-top:8px;color:#444;'></div>
 
   <div class='card'>
