@@ -2,7 +2,7 @@
   "title": "AIOS Mission Control",
   "visibility": "private-owner-only",
   "owner": "Cường",
-  "updated_at": "2026-04-08T00:06:38.970803+07:00",
+  "updated_at": "2026-04-08T00:01:20.774836+07:00",
   "security": {
     "public": false,
     "note": "Mission Control chỉ dùng nội bộ cho 1 mình anh Cường xem trên local dashboard."
@@ -310,10 +310,6 @@
     {
       "created_at": "2026-04-08T00:01:20.774811+07:00",
       "text": "Integrated Story Audio Reader into AIOS dashboard as a tab link at /story-reader and enabled LAN access via main dashboard port."
-    },
-    {
-      "created_at": "2026-04-08T00:06:38.970779+07:00",
-      "text": "Story Audio Reader upgraded with OCR-from-image (tesseract.js), so app can read text extracted from image files."
     }
   ],
   "blockers": [],
