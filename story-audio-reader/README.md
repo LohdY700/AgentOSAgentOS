@@ -14,7 +14,6 @@ Mở: http://127.0.0.1:8099
 ## Tính năng
 - Dán nội dung truyện và đọc thành tiếng
 - OCR từ ảnh (jpg/png) để trích chữ rồi đọc luôn
-- Lưu nội dung đã OCR/dán vào Wiki pipeline (`/api/wiki/ingest`)
 - Chọn giọng đọc (ưu tiên tiếng Việt nếu có)
 - Điều chỉnh tốc độ
 - Tạm dừng / tiếp tục / dừng

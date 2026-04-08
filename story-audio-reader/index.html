@@ -22,9 +22,6 @@
     <div class="row">
       <input id="imgFile" type="file" accept="image/*" />
       <button id="ocrBtn">🖼 OCR từ ảnh</button>
-      <input id="wikiTitle" placeholder="Tiêu đề truyện để lưu Wiki" />
-      <input id="wikiTags" placeholder="tags,vd: fairy,vn" />
-      <button id="saveWikiBtn">💾 Lưu vào Wiki</button>
       <select id="mode">
         <option value="browser">Giọng trình duyệt</option>
         <option value="server">Giọng vùng miền (FPT)</option>
@@ -142,26 +139,6 @@
     document.getElementById('pauseBtn').onclick = () => { synth.pause(); setStatus('Đã tạm dừng.'); };
     document.getElementById('resumeBtn').onclick = () => { synth.resume(); setStatus('Tiếp tục đọc...'); };
     document.getElementById('stopBtn').onclick = () => { synth.cancel(); setStatus('Đã dừng.'); };
-
-    document.getElementById('saveWikiBtn').onclick = async () => {
-      const title = (document.getElementById('wikiTitle').value || '').trim();
-      const tags = (document.getElementById('wikiTags').value || '').trim();
-      const content = (storyEl.value || '').trim();
-      if (!title || !content) return setStatus('Cần tiêu đề + nội dung để lưu wiki.');
-      setStatus('Đang lưu vào wiki...');
-      try {
-        const res = await fetch('/api/wiki/ingest', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ title, content, tags })
-        });
-        const data = await res.json();
-        if (!res.ok || !data.ok) throw new Error(data.error || 'save failed');
-        setStatus('Đã lưu wiki ✅: ' + (data.path || 'ok'));
-      } catch (e) {
-        setStatus('Lưu wiki lỗi: ' + ((e && e.message) || e));
-      }
-    };
 
     document.getElementById('ocrBtn').onclick = async () => {
       const f = document.getElementById('imgFile').files?.[0];
