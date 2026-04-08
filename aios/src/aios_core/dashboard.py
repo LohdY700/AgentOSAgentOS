@@ -312,6 +312,56 @@ def _gpon_status(target_ip: str = "192.168.1.1") -> dict[str, Any]:
     return out
 
 
+
+
+def _wifi_scan_status(iface: str = "wlp1s0") -> dict[str, Any]:
+    import re
+    out: dict[str, Any] = {"ok": True, "iface": iface, "items": []}
+    try:
+        raw = subprocess.check_output(
+            ["nmcli", "-t", "--escape", "no", "-f", "SSID,BSSID,FREQ,SIGNAL,SECURITY", "dev", "wifi", "list", "ifname", iface],
+            text=True,
+            timeout=10,
+        )
+        rows = []
+        for line in raw.splitlines():
+            if not line.strip():
+                continue
+            ln = line.strip()
+            m = re.match(r"^(.*?):((?:[0-9A-Fa-f]{2}\\:){5}[0-9A-Fa-f]{2}):(.*?):(.*?):(.*)$", ln)
+            if not m:
+                continue
+            ssid = m.group(1)
+            bssid = m.group(2).replace("\\:", ":")
+            freq = m.group(3)
+            signal = m.group(4)
+            security = m.group(5)
+            band = "unknown"
+            try:
+                f = int(freq)
+                if 2400 <= f <= 2500:
+                    band = "2.4GHz"
+                elif 4900 <= f <= 5900:
+                    band = "5GHz"
+                elif 5925 <= f <= 7125:
+                    band = "6GHz"
+            except Exception:
+                pass
+            rows.append({
+                "ssid": ssid,
+                "bssid": bssid,
+                "freq_mhz": freq,
+                "band": band,
+                "signal": signal,
+                "security": security,
+            })
+        out["items"] = rows
+    except Exception as exc:  # noqa: BLE001
+        out["ok"] = False
+        out["error"] = str(exc)
+    return out
+
+
 def _mission_path(root_dir: Path) -> Path:
     return root_dir / "data" / "mission-control.json"
 
@@ -677,6 +727,9 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
             if parsed.path == "/api/gpon/status":
                 self._send_json(_gpon_status("192.168.1.1"))
                 return
+            if parsed.path == "/api/wifi/scan":
+                self._send_json(_wifi_scan_status("wlp1s0"))
+                return
             if parsed.path in ("/story-reader", "/story-reader/index.html"):
                 story_path = root_dir.parent / "story-audio-reader" / "index.html"
                 if story_path.exists():
@@ -689,6 +742,9 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                 return
             if parsed.path in ("/gpon", "/gpon/index.html"):
                 self._send_html(GPON_HTML)
+                return
+            if parsed.path in ("/wifi-scan", "/wifi-scan/index.html"):
+                self._send_html(WIFI_SCAN_HTML)
                 return
             if parsed.path in ("/", "/index.html"):
                 self._send_html(DASHBOARD_HTML)
@@ -1382,7 +1438,7 @@ input,button{padding:8px} .card{border:1px solid #ddd;border-radius:10px;padding
 pre{white-space:pre-wrap}
 </style></head><body>
 <h1>🔎 Wiki Search & QA</h1>
-<p><a href='/'>⬅ Dashboard</a></p>
+<p><a href='/'>⬅ Dashboard</a> · <a href='/wifi-scan'>WiFi Scan</a></p>
 <div class='card'>
   <input id='q' style='width:65%' placeholder='Nhập câu hỏi hoặc từ khóa...' />
   <button onclick='runSearch()'>Search</button>
@@ -1426,7 +1482,7 @@ ul{margin:0;padding-left:18px;color:var(--muted)}
 </style>
 </head><body>
 <h1>📡 GPon</h1>
-<p><a href='/'>⬅ Dashboard</a></p>
+<p><a href='/'>⬅ Dashboard</a> · <a href='/wifi-scan'>WiFi Scan</a></p>
 <div class='card'>
   <button onclick='refreshNow()'>Kiểm tra lại</button>
   <span id='badge' class='badge' style='margin-left:8px'>...</span>
@@ -1460,4 +1516,31 @@ async function refreshNow(){
  arr.forEach(n=>{ const li=document.createElement('li'); li.textContent=`${n.dev||'-'} → ${n.mac||'-'} [${n.state||'-'}]`; ul.appendChild(li); });
 }
 refreshNow(); setInterval(refreshNow, 15000);
+</script></body></html>"""
+
+
+WIFI_SCAN_HTML = """<!doctype html>
+<html lang='vi'><head>
+<meta charset='utf-8'/><meta name='viewport' content='width=device-width, initial-scale=1'/>
+<title>WiFi Scan</title>
+<style>body{font-family:system-ui,sans-serif;max-width:980px;margin:24px auto;padding:0 12px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;font-size:14px}th{background:#f4f4f4}button{padding:8px 12px}</style>
+</head><body>
+<h1>📶 WiFi Scan</h1>
+<p><a href='/'>⬅ Dashboard</a> · <a href='/gpon'>GPon</a></p>
+<p><button onclick='scan()'>Quét lại</button> <span id='status'>...</span></p>
+<table><thead><tr><th>SSID</th><th>BSSID (MAC)</th><th>Band</th><th>Freq</th><th>Signal</th><th>Security</th></tr></thead><tbody id='rows'></tbody></table>
+<script>
+async function scan(){
+ const st=document.getElementById('status'); st.textContent='Đang quét...';
+ const r=await fetch('/api/wifi/scan'); const d=await r.json();
+ const tb=document.getElementById('rows'); tb.innerHTML='';
+ if(!d.ok){ st.textContent='Lỗi: '+(d.error||'scan failed'); return; }
+ (d.items||[]).forEach(it=>{
+   const tr=document.createElement('tr');
+   tr.innerHTML=`<td>${it.ssid||''}</td><td>${it.bssid||''}</td><td>${it.band||''}</td><td>${it.freq_mhz||''}</td><td>${it.signal||''}</td><td>${it.security||''}</td>`;
+   tb.appendChild(tr);
+ });
+ st.textContent='Xong: '+(d.items||[]).length+' mạng';
+}
+scan(); setInterval(scan,20000);
 </script></body></html>"""
