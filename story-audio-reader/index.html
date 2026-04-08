@@ -22,15 +22,6 @@
     <div class="row">
       <input id="imgFile" type="file" accept="image/*" />
       <button id="ocrBtn">🖼 OCR từ ảnh</button>
-      <select id="mode">
-        <option value="browser">Giọng trình duyệt</option>
-        <option value="server">Giọng vùng miền (FPT)</option>
-      </select>
-      <select id="region">
-        <option value="bac">Nữ miền Bắc</option>
-        <option value="trung">Nữ miền Trung</option>
-        <option value="nam">Nữ miền Nam</option>
-      </select>
       <select id="voice"></select>
       <label>Tốc độ <input id="rate" type="range" min="0.6" max="1.4" step="0.05" value="1" /></label>
       <button id="readBtn">▶️ Đọc</button>
@@ -96,39 +87,9 @@
       synth.speak(u);
     }
 
-    async function speakViaServer(text, voiceKey) {
-      setStatus('Đang tạo audio giọng vùng miền...');
-      const res = await fetch('/api/story/tts', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ text, voice: voiceKey })
-      });
-      if (!res.ok) {
-        let msg = 'TTS server lỗi';
-        try { const j = await res.json(); msg = j.error || msg; } catch {}
-        throw new Error(msg);
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audio.onended = () => { URL.revokeObjectURL(url); setStatus('Đọc xong ✅'); };
-      audio.play();
-      setStatus('Đang phát audio server...');
-    }
-
-    document.getElementById('readBtn').onclick = async () => {
+    document.getElementById('readBtn').onclick = () => {
       const t = storyEl.value.trim();
       if (!t) return setStatus('Chưa có nội dung truyện.');
-      const mode = document.getElementById('mode').value;
-      if (mode === 'server') {
-        try {
-          const vk = document.getElementById('region').value || 'bac';
-          await speakViaServer(t.slice(0, 4000), vk);
-        } catch (e) {
-          setStatus('Lỗi giọng vùng miền: ' + ((e && e.message) || e));
-        }
-        return;
-      }
       synth.cancel();
       queue = splitChunks(t);
       idx = 0;

@@ -21,7 +21,6 @@ from .conversation_data import ChatExampleStore
 from .conversation_quality import FeedbackStore, quality_summary, build_daily_rubric_review
 from .memory_backend import load_memory_backend
 from .mission_control_assets import MISSION_CONTROL_HTML, MISSION_CONTROL_JS
-from .story_tts import synth_story_audio, StoryTtsError
 
 
 def _now_vn_iso() -> str:
@@ -467,15 +466,6 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
             self.end_headers()
             self.wfile.write(body)
 
-        def _send_audio_mp3(self, data: bytes, code: int = 200) -> None:
-            self.send_response(code)
-            self.send_header("Content-Type", "audio/mpeg")
-            self.send_header("Cache-Control", "no-store, max-age=0")
-            self.send_header("Pragma", "no-cache")
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            self.wfile.write(data)
-
         def do_GET(self):  # noqa: N802
             parsed = urlparse(self.path)
             if parsed.path == "/api/status":
@@ -671,23 +661,6 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                     mem = load_memory_backend(root_dir)
                     mem.backend.add(text=text, metadata=metadata)
                     self._send_json({"ok": True, "backend": mem.active})
-                except Exception as exc:  # noqa: BLE001
-                    self._send_json({"ok": False, "error": str(exc)}, code=500)
-                return
-            if parsed.path == "/api/story/tts":
-                try:
-                    length = int(self.headers.get("Content-Length", "0"))
-                    raw = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
-                    body = json.loads(raw)
-                    text = str(body.get("text", "")).strip()
-                    voice_key = str(body.get("voice", "bac")).strip().lower() or "bac"
-                    if not text:
-                        self._send_json({"ok": False, "error": "text is required"}, code=400)
-                        return
-                    audio = synth_story_audio(root_dir, text=text[:4000], voice_key=voice_key)
-                    self._send_audio_mp3(audio)
-                except StoryTtsError as exc:
-                    self._send_json({"ok": False, "error": str(exc)}, code=400)
                 except Exception as exc:  # noqa: BLE001
                     self._send_json({"ok": False, "error": str(exc)}, code=500)
                 return
