@@ -233,10 +233,18 @@ def _suggest_memory_filters(query: str) -> dict[str, str]:
 
 
 def _gpon_status(target_ip: str = "192.168.1.1") -> dict[str, Any]:
+    import re
     import socket
     import urllib.request
 
     out: dict[str, Any] = {"ok": True, "target": target_ip}
+
+    # hostname (reverse DNS best-effort)
+    try:
+        host, _, _ = socket.gethostbyaddr(target_ip)
+        out["hostname"] = host
+    except Exception:
+        out["hostname"] = ""
 
     # ping
     try:
@@ -247,10 +255,25 @@ def _gpon_status(target_ip: str = "192.168.1.1") -> dict[str, Any]:
         out["ping_ok"] = False
         out["ping"] = str(exc)
 
-    # arp/neigh
+    # arp/neigh (parse mac + interface)
+    out["neighbors"] = []
     try:
-        n = subprocess.check_output(["ip", "neigh", "show", target_ip], text=True, timeout=5).strip()
-        out["neighbor"] = n
+        raw = subprocess.check_output(["ip", "neigh", "show", target_ip], text=True, timeout=5).strip()
+        out["neighbor"] = raw
+        for line in [x.strip() for x in raw.splitlines() if x.strip()]:
+            mac = ""
+            dev = ""
+            state = ""
+            m = re.search(r"lladdr\s+([0-9a-f:]{17})", line, flags=re.I)
+            if m:
+                mac = m.group(1)
+            d = re.search(r"\bdev\s+(\S+)", line)
+            if d:
+                dev = d.group(1)
+            st = re.search(r"\b(REACHABLE|STALE|DELAY|FAILED|INCOMPLETE|PERMANENT)\b", line)
+            if st:
+                state = st.group(1)
+            out["neighbors"].append({"dev": dev, "mac": mac, "state": state, "raw": line})
     except Exception:
         out["neighbor"] = ""
 
@@ -1381,13 +1404,21 @@ GPON_HTML = """<!doctype html>
 <div class='card'>
   <button onclick='refreshNow()'>Kiểm tra lại</button>
   <p id='sum'>Đang tải...</p>
-  <pre id='raw'></pre>
+  <ul id='gponInfo'></ul>
 </div>
 <script>
 async function refreshNow(){
  const r=await fetch('/api/gpon/status'); const d=await r.json();
  document.getElementById('sum').textContent = `Target: ${d.target} | Ping: ${d.ping_ok?'OK':'FAIL'} | TCP80: ${d.tcp80?'OPEN':'CLOSED'} | HTTP: ${d.http_status||0}`;
- document.getElementById('raw').textContent = JSON.stringify(d,null,2);
+ const ul = document.getElementById('gponInfo');
+ ul.innerHTML = '';
+ const pairs = [
+   ['Hostname', d.hostname || '-'],
+   ['HTTP Server', d.http_server || '-'],
+   ['Neighbor', d.neighbor || '-'],
+ ];
+ (d.neighbors || []).forEach((n, i) => pairs.push([`MAC #${i+1} (${n.dev||'-'})`, n.mac || '-']));
+ pairs.forEach(([k,v]) => { const li=document.createElement('li'); li.textContent = `${k}: ${v}`; ul.appendChild(li); });
 }
 refreshNow(); setInterval(refreshNow, 15000);
 </script></body></html>
