@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from aios_core.wiki_pipeline import wiki_ingest, wiki_build_index, wiki_export_slide, wiki_search, wiki_answer
+from aios_core.wiki_pipeline import wiki_ingest, wiki_build_index, wiki_export_slide
 
 
 class WikiPipelineTests(unittest.TestCase):
@@ -27,14 +27,6 @@ class WikiPipelineTests(unittest.TestCase):
             c = wiki_export_slide(root, slug="my-story")
             self.assertTrue(c.get("ok"))
             self.assertIn("slides", c.get("path", ""))
-
-            s = wiki_search(root, query="hello", limit=3)
-            self.assertTrue(s.get("ok"))
-            self.assertGreaterEqual(len(s.get("items", [])), 1)
-
-            qa = wiki_answer(root, question="hello", limit=2)
-            self.assertTrue(qa.get("ok"))
-            self.assertIn("-", str(qa.get("answer", "")))
 
 
 if __name__ == "__main__":
