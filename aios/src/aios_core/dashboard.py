@@ -255,6 +255,16 @@ def _gpon_status(target_ip: str = "192.168.1.1") -> dict[str, Any]:
         out["ping_ok"] = False
         out["ping"] = str(exc)
 
+    # route-selected interface (the one actually used to reach target)
+    out["route_dev"] = ""
+    try:
+        route_line = subprocess.check_output(["ip", "route", "get", target_ip], text=True, timeout=5).strip().splitlines()[0]
+        mdev = re.search(r"\bdev\s+(\S+)", route_line)
+        if mdev:
+            out["route_dev"] = mdev.group(1)
+    except Exception:
+        pass
+
     # arp/neigh (parse mac + interface)
     out["neighbors"] = []
     try:
@@ -273,6 +283,9 @@ def _gpon_status(target_ip: str = "192.168.1.1") -> dict[str, Any]:
             st = re.search(r"\b(REACHABLE|STALE|DELAY|FAILED|INCOMPLETE|PERMANENT)\b", line)
             if st:
                 state = st.group(1)
+            # only keep neighbor on the route-selected interface when available
+            if out["route_dev"] and dev and dev != out["route_dev"]:
+                continue
             out["neighbors"].append({"dev": dev, "mac": mac, "state": state, "raw": line})
     except Exception:
         out["neighbor"] = ""
@@ -1397,29 +1410,54 @@ GPON_HTML = """<!doctype html>
 <html lang='vi'><head>
 <meta charset='utf-8'/><meta name='viewport' content='width=device-width, initial-scale=1'/>
 <title>GPon Monitor</title>
-<style>body{font-family:system-ui,sans-serif;max-width:900px;margin:24px auto;padding:0 12px} .card{border:1px solid #ddd;border-radius:10px;padding:12px} pre{white-space:pre-wrap;background:#f7f7f7;padding:10px;border-radius:8px}</style>
+<style>
+:root{--bg:#0b1020;--card:#121a33;--line:#283359;--txt:#e9eefc;--muted:#9fb0de;--ok:#22c55e;--bad:#ef4444}
+body{font-family:system-ui,sans-serif;max-width:980px;margin:24px auto;padding:0 12px;background:var(--bg);color:var(--txt)}
+a{color:#9cc0ff}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:12px;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+.row{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:10px}
+.k{font-size:12px;color:var(--muted);margin-bottom:4px}
+.v{font-size:16px;font-weight:700}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700}
+.ok{background:rgba(34,197,94,.15);color:#86efac}
+.bad{background:rgba(239,68,68,.15);color:#fca5a5}
+button{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#1a2447;color:var(--txt);cursor:pointer}
+ul{margin:0;padding-left:18px;color:var(--muted)}
+</style>
 </head><body>
 <h1>📡 GPon</h1>
 <p><a href='/'>⬅ Dashboard</a></p>
 <div class='card'>
   <button onclick='refreshNow()'>Kiểm tra lại</button>
-  <p id='sum'>Đang tải...</p>
-  <ul id='gponInfo'></ul>
+  <span id='badge' class='badge' style='margin-left:8px'>...</span>
+  <p id='sum' style='color:var(--muted)'>Đang tải...</p>
+  <div class='row'>
+    <div><div class='k'>Hostname</div><div id='hostname' class='v'>-</div></div>
+    <div><div class='k'>Route Interface</div><div id='routeDev' class='v'>-</div></div>
+    <div><div class='k'>HTTP Server</div><div id='httpSrv' class='v'>-</div></div>
+    <div><div class='k'>HTTP Status</div><div id='httpSt' class='v'>-</div></div>
+  </div>
+</div>
+<div class='card'>
+  <h3 style='margin-top:0'>MAC đang route tới gateway</h3>
+  <ul id='macList'></ul>
 </div>
 <script>
 async function refreshNow(){
  const r=await fetch('/api/gpon/status'); const d=await r.json();
- document.getElementById('sum').textContent = `Target: ${d.target} | Ping: ${d.ping_ok?'OK':'FAIL'} | TCP80: ${d.tcp80?'OPEN':'CLOSED'} | HTTP: ${d.http_status||0}`;
- const ul = document.getElementById('gponInfo');
- ul.innerHTML = '';
- const pairs = [
-   ['Hostname', d.hostname || '-'],
-   ['HTTP Server', d.http_server || '-'],
-   ['Neighbor', d.neighbor || '-'],
- ];
- (d.neighbors || []).forEach((n, i) => pairs.push([`MAC #${i+1} (${n.dev||'-'})`, n.mac || '-']));
- pairs.forEach(([k,v]) => { const li=document.createElement('li'); li.textContent = `${k}: ${v}`; ul.appendChild(li); });
+ const ping = d.ping_ok ? 'OK' : 'FAIL';
+ const badge=document.getElementById('badge');
+ badge.textContent = 'Ping ' + ping;
+ badge.className = 'badge ' + (d.ping_ok ? 'ok':'bad');
+ document.getElementById('sum').textContent = `Target: ${d.target} | TCP80: ${d.tcp80?'OPEN':'CLOSED'} | Last update: ${new Date().toLocaleTimeString()}`;
+ document.getElementById('hostname').textContent = d.hostname || '-';
+ document.getElementById('routeDev').textContent = d.route_dev || '-';
+ document.getElementById('httpSrv').textContent = d.http_server || '-';
+ document.getElementById('httpSt').textContent = (d.http_status || 0);
+ const ul=document.getElementById('macList'); ul.innerHTML='';
+ const arr=(d.neighbors||[]);
+ if(!arr.length){ const li=document.createElement('li'); li.textContent='Không có dữ liệu MAC'; ul.appendChild(li); }
+ arr.forEach(n=>{ const li=document.createElement('li'); li.textContent=`${n.dev||'-'} → ${n.mac||'-'} [${n.state||'-'}]`; ul.appendChild(li); });
 }
 refreshNow(); setInterval(refreshNow, 15000);
-</script></body></html>
-"""
+</script></body></html>"""
