@@ -2,7 +2,7 @@
   "title": "AIOS Mission Control",
   "visibility": "private-owner-only",
   "owner": "Cường",
-  "updated_at": "2026-04-08T06:44:15.265952+07:00",
+  "updated_at": "2026-04-08T08:33:41.216255+07:00",
   "security": {
     "public": false,
     "note": "Mission Control chỉ dùng nội bộ cho 1 mình anh Cường xem trên local dashboard."
@@ -330,6 +330,10 @@
     {
       "created_at": "2026-04-08T06:44:15.265929+07:00",
       "text": "Step 2 completed: added Wiki Search & QA tab with /api/wiki/search and /api/wiki/qa endpoints in dashboard."
+    },
+    {
+      "created_at": "2026-04-08T08:33:41.216233+07:00",
+      "text": "Added GPon tab with connectivity diagnostics for 192.168.1.1 (/gpon, /api/gpon/status)."
     }
   ],
   "blockers": [],

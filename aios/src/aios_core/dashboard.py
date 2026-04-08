@@ -230,6 +230,52 @@ def _suggest_memory_filters(query: str) -> dict[str, str]:
     return {}
 
 
+
+
+def _gpon_status(target_ip: str = "192.168.1.1") -> dict[str, Any]:
+    import socket
+    import urllib.request
+
+    out: dict[str, Any] = {"ok": True, "target": target_ip}
+
+    # ping
+    try:
+        p = subprocess.run(["ping", "-c", "2", "-W", "2", target_ip], capture_output=True, text=True, timeout=8)
+        out["ping_ok"] = p.returncode == 0
+        out["ping"] = (p.stdout or p.stderr)[-800:]
+    except Exception as exc:  # noqa: BLE001
+        out["ping_ok"] = False
+        out["ping"] = str(exc)
+
+    # arp/neigh
+    try:
+        n = subprocess.check_output(["ip", "neigh", "show", target_ip], text=True, timeout=5).strip()
+        out["neighbor"] = n
+    except Exception:
+        out["neighbor"] = ""
+
+    # TCP 80 reachability
+    try:
+        sock = socket.create_connection((target_ip, 80), timeout=3)
+        sock.close()
+        out["tcp80"] = True
+    except Exception:
+        out["tcp80"] = False
+
+    # HTTP headers (best effort)
+    try:
+        req = urllib.request.Request(f"http://{target_ip}", method="GET")
+        with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310
+            out["http_status"] = int(getattr(resp, "status", 0) or 0)
+            out["http_server"] = str(resp.headers.get("Server", ""))
+            out["http_title_hint"] = str(resp.headers.get("WWW-Authenticate", ""))
+    except Exception as exc:  # noqa: BLE001
+        out["http_status"] = 0
+        out["http_error"] = str(exc)
+
+    return out
+
+
 def _mission_path(root_dir: Path) -> Path:
     return root_dir / "data" / "mission-control.json"
 
@@ -592,6 +638,9 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                 self.end_headers()
                 self.wfile.write(body)
                 return
+            if parsed.path == "/api/gpon/status":
+                self._send_json(_gpon_status("192.168.1.1"))
+                return
             if parsed.path in ("/story-reader", "/story-reader/index.html"):
                 story_path = root_dir.parent / "story-audio-reader" / "index.html"
                 if story_path.exists():
@@ -601,6 +650,9 @@ def make_handler(root_dir: Path, guard_config_path: Path, store_config_path: Pat
                 return
             if parsed.path in ("/wiki-search", "/wiki-search/index.html"):
                 self._send_html(WIKI_SEARCH_HTML)
+                return
+            if parsed.path in ("/gpon", "/gpon/index.html"):
+                self._send_html(GPON_HTML)
                 return
             if parsed.path in ("/", "/index.html"):
                 self._send_html(DASHBOARD_HTML)
@@ -880,6 +932,7 @@ DASHBOARD_HTML = """<!doctype html>
   <a href='/mission-control' style='margin-left:8px'>Open Mission Control</a>
   <a href='/story-reader' style='margin-left:8px'>Open Story Audio Reader</a>
   <a href='/wiki-search' style='margin-left:8px'>Open Wiki Search & QA</a>
+  <a href='/gpon' style='margin-left:8px'>Open GPon</a>
   <div id='action-result' style='margin-top:8px;color:#444;'></div>
 
   <div class='card'>
@@ -1315,3 +1368,27 @@ async function runQA(){
  document.getElementById('qaOut').textContent=d.answer||JSON.stringify(d,null,2);
 }
 </script></body></html>"""
+
+
+GPON_HTML = """<!doctype html>
+<html lang='vi'><head>
+<meta charset='utf-8'/><meta name='viewport' content='width=device-width, initial-scale=1'/>
+<title>GPon Monitor</title>
+<style>body{font-family:system-ui,sans-serif;max-width:900px;margin:24px auto;padding:0 12px} .card{border:1px solid #ddd;border-radius:10px;padding:12px} pre{white-space:pre-wrap;background:#f7f7f7;padding:10px;border-radius:8px}</style>
+</head><body>
+<h1>📡 GPon</h1>
+<p><a href='/'>⬅ Dashboard</a></p>
+<div class='card'>
+  <button onclick='refreshNow()'>Kiểm tra lại</button>
+  <p id='sum'>Đang tải...</p>
+  <pre id='raw'></pre>
+</div>
+<script>
+async function refreshNow(){
+ const r=await fetch('/api/gpon/status'); const d=await r.json();
+ document.getElementById('sum').textContent = `Target: ${d.target} | Ping: ${d.ping_ok?'OK':'FAIL'} | TCP80: ${d.tcp80?'OPEN':'CLOSED'} | HTTP: ${d.http_status||0}`;
+ document.getElementById('raw').textContent = JSON.stringify(d,null,2);
+}
+refreshNow(); setInterval(refreshNow, 15000);
+</script></body></html>
+"""
